@@ -1,0 +1,6 @@
+all:
+    gcc -c pcb.c -o pcb.o
+    gcc -c que.c -o que.o
+    gcc pcb.o que.o que_test.c -o queue.exe
+    pcb.h pcb.c que.c que.h que_test.c -o queue.exe
+objects: 
