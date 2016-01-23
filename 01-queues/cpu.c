@@ -3,7 +3,7 @@
  *
  *  Created on: January 21 2016
  *      Author: Melinda Robertson
- *     Version: January 21 2016
+ *     Version: January 23 2016
  *
  *      A loop to simulate a CPU.
  */
@@ -13,11 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*Types of interrupts the scheduler can recieve.*/
-enum interrupt_type {
-  timer
-};
 
 unsigned int pseudostack;
 
@@ -36,20 +31,8 @@ pcb_ptr make_pcb(int pid) {
     return node;
 }
 
-int dispatcher() {
-    
-}
-
-int scheduler(enum interrupt_type inter) {
-    switch(inter) {
-        case timer:
-        //stuff
-        break;
-    }
-}
-
  
-int main(void) {
+int cpu_loop(cpu_ptr this) {
      //make a loop, runs 30 times
      int run = 30;
      //initialize queues
@@ -59,10 +42,9 @@ int main(void) {
     que_ptr 
         //ready
         //IO
-        //dead
-    //types of interrupts: IO, timer, 
+        //dead 
      while(run) {
-         //create a process; PCB
+         //create 0-5 processes; PCB
          //add to enqueueing queue
          //move a process from the enqueueing queue to the ready queue
          //get a process from the ready queue

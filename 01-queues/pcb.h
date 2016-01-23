@@ -13,10 +13,10 @@
 
 #define NUMREGS 4
 #define MAXPRI 15
-#define address void*
+#define address int
 /*Possible states a process can be in. Default is dead.*/
 enum state_type {
-  ready, running, waiting, dead
+  ready, running, interrupted, waiting, dead
 };
 /*
  * Process control block data type. Holds everything
@@ -27,7 +27,6 @@ typedef struct pcb_type {
     enum state_type state;
     address pc;
     int reg_file[NUMREGS];
-    //struct pcb_type * next_pcb;
     int priority;
 } pcb;
 typedef pcb * pcb_ptr;
