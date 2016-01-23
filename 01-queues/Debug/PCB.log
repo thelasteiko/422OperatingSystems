@@ -1,0 +1,2 @@
+﻿  que_test.c
+que_test.c(27): warning C4047: '=': 'pcb_ptr' differs in levels of indirection from 'pcb_ptr (__cdecl *)()'

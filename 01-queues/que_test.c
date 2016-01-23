@@ -1,5 +1,5 @@
 /*
-*
+*  Jason Hall
 */
 
 #include "pcb.h"
@@ -35,8 +35,11 @@ pcb_ptr get_random(int pid) {
     return node;
 }
 
-print_que(que_ptr list) {
-	printf("%s\n", q_toString(list));
+print_que(que_ptr list, pcb_ptr node) {
+	printf(q_toString(list));
+	printf("; ");
+	printf(pcb_toString(node));
+	printf("\n");
 }
 
 fill_que(que_ptr list, int min, int max) {
@@ -49,24 +52,36 @@ fill_que(que_ptr list, int min, int max) {
 
 	while(x < times) {
 		pcb_ptr node = get_random(x);
-		q_add(list, node);
-		print_que(list);
+		q_enqueue(list, node);
+        printf("%s\n", q_toString(list));
+		printf("; ");
+		printf(pcb_toString(node));
+		printf("\n");
+		//printf("Last node: %s\n", pcb_toString(list->last_node));
+		//print_que(list, node);
         x = x+1;
 	}
+    printf("%s\n", q_toString(list));
 }
 
 peek_que(que_ptr list) {
-	print_que(list);
+	printf(q_toString(list));
+	printf("\n");
 	printf(pcb_toString(q_peek(list)));
+	printf("\n");
+	printf(q_toString(list));
 	printf("\n");
 }
 
 empty_que(que_ptr list) {
 	while (list->node_count > 0) {
-		print_que(list);
-        printf("Removed: %s\n",pcb_toString(q_remove(list)));
+		printf(q_toString(list));
+		printf("\n");
+		printf(pcb_toString(q_dequeue(list)));
+		printf("\n");
 	}
-    print_que(list);
+	printf(q_toString(list));
+	printf("\n");
 }
 
 int main(void) {
@@ -77,6 +92,7 @@ int main(void) {
     char * str;
     str = q_toString(list);
     printf("Empty Queue: %s\n", str);
+    
 	printf("Fill que:\n");
 	fill_que(list, 10, 30);
 	printf("Peek que:\n");

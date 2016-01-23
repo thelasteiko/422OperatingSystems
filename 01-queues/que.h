@@ -13,19 +13,27 @@
 #ifndef MY_QUE
 #define MY_QUE
 
+typedef struct node_type {
+	struct pcb_type * my_pcb;
+	struct node_type * next_node;
+} node;
+
 typedef struct que_type {
-	struct pcb_type * first_node;
-	struct pcb_type * last_node;
+	struct node_type * first_node;
+	struct node_type * last_node;
 	int node_count;
 } que;
 
+// pointer for a node
+typedef node * node_ptr;
+// pointer for a que
 typedef que * que_ptr;
 // Creates a que.
 que_ptr que_constructor();
 // to put stuff onto the que
-int q_add(que_ptr this, pcb_ptr new_node);
+int q_enqueue(que_ptr this, pcb_ptr new_node);
 // get the first item from the que
-pcb_ptr q_remove(que_ptr this);
+pcb_ptr q_dequeue(que_ptr this);
 // peek at the first item in the que
 pcb_ptr q_peek(que_ptr this);
 // Deallocates the memory dedicated to the que.

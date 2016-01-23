@@ -27,7 +27,7 @@ typedef struct pcb_type {
     enum state_type state;
     address pc;
     int reg_file[NUMREGS];
-    struct pcb_type * next_pcb;
+    //struct pcb_type * next_pcb;
     int priority;
 } pcb;
 typedef pcb * pcb_ptr;
@@ -60,9 +60,9 @@ int pcb_set_reg_index           (pcb_ptr this, int index, int value);
 /*Get the value of a particular register for a process.*/
 int pcb_get_reg_index           (pcb_ptr this, int index);
 /*Set the next process.*/
-int pcb_set_next                (pcb_ptr this, pcb_ptr next);
+//int pcb_set_next                (pcb_ptr this, pcb_ptr next);
 /*Return the pointer to the next process.*/
-pcb_ptr pcb_get_next     (pcb_ptr this);
+//pcb_ptr pcb_get_next     (pcb_ptr this);
 /*Set the priority of the current process.*/
 int pcb_set_priority            (pcb_ptr this, int priority);
 /*Returns the priority of the current process.*/

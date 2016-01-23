@@ -47,10 +47,13 @@ int main(void) {
     block = pcb_constructor();
     char * str;
     str = pcb_toString(block);
+    printf("Location: %p\n", block);
     printf("Uninitialized Block: %s\n", str);
     
+    //random integer between 0 and 15
     pcb_ptr node = get_random();
     str = pcb_toString(node);
+    printf("Location: %p\n", node);
     printf("Randomly Generated Block: %s\n", str);
     
     pcb_set_next(block, node);

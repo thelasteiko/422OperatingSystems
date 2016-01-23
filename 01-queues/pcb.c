@@ -32,7 +32,7 @@ pcb_ptr pcb_constructor() {
         reg[i] = 0;
     }
     memcpy(p->reg_file, reg, NUMREGS);
-    p->next_pcb = NULL;
+    //p->next_pcb = NULL;
     return p;
 }
 int pcb_initialize(pcb_ptr this, int pid, enum state_type state, address pc,
@@ -105,20 +105,20 @@ int pcb_get_reg_index           (pcb_ptr this, int index) {
     if (!this->reg_file) return error_handle("PCB registers not initialized.", -1, 1);
     return this->reg_file[index];
 }
-int pcb_set_next                (pcb_ptr this, pcb_ptr next) {
-    if (!this) return error_handle("PCB is null.", 2, 1);
-    if (!next) return error_handle("Next is null.", 3, 1);
-    this->next_pcb = next;
-    return 0;
-}
-pcb_ptr pcb_get_next     (pcb_ptr this) {
-    if (!this) {
-        error_handle("PCB is null.", 2, 1);
-        return NULL;
-    }
-    if (!this->next_pcb) return NULL;
-    return (pcb_ptr) this->next_pcb;
-}
+//int pcb_set_next                (pcb_ptr this, pcb_ptr next) {
+//    if (!this) return error_handle("PCB is null.", 2, 1);
+//    if (!next) return error_handle("Next is null.", 3, 1);
+//    this->next_pcb = next;
+//    return 0;
+//}
+//pcb_ptr pcb_get_next     (pcb_ptr this) {
+//    if (!this) {
+//        error_handle("PCB is null.", 2, 1);
+//        return NULL;
+//    }
+//    if (!this->next_pcb) return NULL;
+//    return (pcb_ptr) this->next_pcb;
+//}
 int pcb_set_priority            (pcb_ptr this, int priority) {
     if (!this) return error_handle("PCB is null.", 2, 1);
     this->priority = priority;
