@@ -32,23 +32,23 @@ pcb_ptr make_pcb(int pid) {
 }
 
  
-int cpu_loop(cpu_ptr this) {
-     //make a loop, runs 30 times
+int cpu_loop(cpu_ptr this, sch_ptr scheduler) {
+     //make a loop, runs ?? times
      int run = 30;
-     //initialize queues
+     int pc = 0;
         //enqueueing
-    que_ptr enqrdy = que_constructor();
-    que_ptr readyq = que_constructor();
-    que_ptr 
         //ready
-        //IO
-        //dead 
+        //dead
      while(run) {
-         //create 0-5 processes; PCB
-         //add to enqueueing queue
+         //create 0-5 processes; add to enqueueing queue
+         sch_create_pcb(scheduler);
          //move a process from the enqueueing queue to the ready queue
+         sch_ready(scheduler);
          //get a process from the ready queue
+         pcb_ptr current = sch_get_running(scheduler);
          //pseudo-run the process; ie add 3000-4000 to the PC
+         pc = current->pc;
+         pc = pc + 
          //if done move to dead
          //else move to end of ready queue
          
