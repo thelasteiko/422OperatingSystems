@@ -1,11 +1,11 @@
 /*
- * mainloop.c
+ * cpu.c
  *
  *  Created on: January 21 2016
  *      Author: Melinda Robertson
- *     Version: January 23 2016
+ *     Version: January 25 2016
  *
- *      A loop to simulate a CPU.
+ *      Has a loop to simulate a CPU.
  */
  
 #include "pcb.h"
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+//holds the PC value when changing PCBs
 unsigned int pseudostack;
 
 pcb_ptr make_pcb(int pid) {
@@ -79,21 +79,28 @@ pcb_ptr dispatcher(que_ptr rdyq, pcb_ptr that) {
     return current;
 }
 
-pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that, enum state inter) {
+pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that, enum state_type inter) {
     switch(inter) {
         case interrupted:
         that->state ready;
         return dispatcher(rdyq, that);
         break;
         case ready:
-        
+        //something far in the future
         break;
     }
+    //something went wrong
+    return null;
 }
 
 pcb_ptr isr(cpu_ptr this, que_ptr rdyq, pcb_ptr current) {
-    that->state = interrupted;
+    //save state
+    current->pc = this->pc;
+    //set to interrupted
+    current->state = interrupted;
+    //call scheduler
     pcb_ptr newcurrent = scheduler(rdyq, current, current->state);
+    //pseudo push to stack
     this->pc = pseudostack;
     return newcurrent;
 }
@@ -124,8 +131,7 @@ int cpu_loop(cpu_ptr this) {
          //pseudo-run the process; ie add 3000-4000 to the PC
          addto = ((rand() % 1000) + 3000);
          this->pc = this->pc + addto;
-         //psuedo push to stack
-         //call isr to set state
+         //call isr -> scheduler -> dispatcher
          current = isr(this, rdyq, current);         
          //timer interrupt
          run = run - 1;
