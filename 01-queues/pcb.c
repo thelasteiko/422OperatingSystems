@@ -24,7 +24,7 @@ pcb_ptr pcb_constructor() {
     if (!p) error_handle("PCB could not be allocated.", 3, 0);
     p->pid = -1;
     p->state = dead;
-    p->pc = NULL;
+    p->pc = 0;
     p->priority = MAXPRI;
     int reg[NUMREGS];
     int i;

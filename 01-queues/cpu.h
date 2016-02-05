@@ -13,12 +13,7 @@
 #ifndef CPU
 #define CPU
 
-typedef struct cpu_type {
-    int pc;
-    int reg_file[NUMREGS];
-} cpu;
 
-typedef cpu * cpu_ptr;
 
 cpu_ptr cpu_construcor(void);
 int cpu_set_pc(cpu_ptr this, int pc);

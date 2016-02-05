@@ -26,6 +26,11 @@ typedef struct pcb_type {
     int pid;
     enum state_type state;
     address pc;
+    address max_pc;
+    int creation; //when it was created
+    int termination; //when it is terminated
+    int terminate; //how many cycles until process stops; 0 for infinity
+    int termcount; //how many time max_pc is passed
     int reg_file[NUMREGS];
     int priority;
 } pcb;
