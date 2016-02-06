@@ -20,7 +20,7 @@ unsigned int pseudostack;
 int cntx = 0;
 int cntx2 = 0;
 int timer = MAXTIME;
-int pc;
+int iotime1 = 0, iotime2 = 0;
 
 int random(int min, int max) {
     return (rand() % (max-min)) + min;
@@ -36,7 +36,7 @@ pcb_ptr make_pcb(int pid) {
     time_t cre;
     time(&cre);
     int t2 = random(0, 15);
-    int last, i, next;
+    int last, i, next, j, k;
     int io1[NUMTRAPS];
     int io2[NUMTRAPS];
     last = pc;
@@ -44,12 +44,9 @@ pcb_ptr make_pcb(int pid) {
     else next = 100;
     for (i = 0; i < NUMTRAPS; i = i + 1) {
         io1[i] = random(last, next);
-        last = next;
-        if (last > mpc-1000) next = next+50;
-        else next = next+100;
-    }
-    for (i = 0; i < NUMTRAPS; i = i + 1) {
-        io2[i] = random(last, next);
+        k = random(last, next);
+        while(k == io1[i]) k = random(last, next);
+        io2[i] = k;
         last = next;
         if (last > mpc-1000) next = next+50;
         else next = next+100;
@@ -82,21 +79,59 @@ int sch_ready(que_ptr enq, que_ptr rdyq) {
     return 0;
 }
 
-pcb_ptr dispatcher(cpu_ptr this, que_ptr rdyq, pcb_ptr that) {
+int timer() {
+    if (timer == 0) {
+        time = MAXTIME;
+        return 1;
+    }
+    else timer = timer - 1;
+    return 0;
+}
+
+int io_interrupt(que_ptr waiting) {
+    if (iotime1 == 0) {
+        if (waiting->node_count > 0)
+            iotime1 = random(MAXTIME * 3, MAXTIME * 4);
+        return 1;
+    }
+    if (iotime2 == 0) {
+        if (waiting->node_count > 0)
+            iotime1 = random(MAXTIME * 3, MAXTIME * 4);
+        return 1;
+    }
+    else {
+        iotime1 = iotime1 - 1;
+        iotime2 = iotime2 - 1;
+    }
+    return 0;
+}
+
+int io_trap_handle(que_ptr rdyq, que_ptr waiting, pcb_ptr node, int device) {
+    node->status = waiting;
+    if (device == 1 && iotime1 == 0)
+        iotime1 = random(MAXTIME * 3, MAXTIME * 4);
+    else if (device == 2 && iotime2 == 0)
+        iotime2 = random(MAXTIME * 3, MAXTIME * 4);
+    node->pc = pc;
+    q_enqueue(waiting);
+    return scheduler(rdyq, node, node->status);
+}
+
+pcb_ptr dispatcher(que_ptr rdyq, pcb_ptr that) {
     /*Move the current PCB to the ready queue and return the next one.*/
-    that->pc = this->pc;
-    memcpy(that->reg_file, this->reg_file, NUMTRAPS);
-    q_enqueue(rdyq, that);
-    
-    if (cntx >= 3) {
-		printf("\r\n%s Switching to: %s", pcb_toString(that), pcb_toString(q_peek(rdyq)));
-		cntx = 0;
-	} else if (cntx <= 3) {
-		cntx = cntx + 1;
-	}
+    if (that) {
+        that->pc = pc;
+        q_enqueue(rdyq, that);
+
+        if (cntx >= 3) {
+            printf("\r\n%s Switching to: %s", pcb_toString(that), pcb_toString(q_peek(rdyq)));
+            cntx = 0;
+        } else if (cntx <= 3) {
+            cntx = cntx + 1;
+        }
+    }
 
     pcb_ptr current = q_dequeue(rdyq);
-    memcpy(this->reg_file, current->reg_file, NUMTRAPS);
     current->state = running;
     pseudostack = current->pc;
 
@@ -111,41 +146,43 @@ pcb_ptr dispatcher(cpu_ptr this, que_ptr rdyq, pcb_ptr that) {
     return current;
 }
 
-pcb_ptr scheduler(cpu_ptr this, que_ptr rdyq, pcb_ptr that, enum state_type inter) {
+pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that,
+    enum state_type inter) {
     /*Determine what to do based on state.*/
     switch(inter) {
         case interrupted:
         that->state = ready;
-        return dispatcher(this, rdyq, that);
+        return dispatcher(rdyq, that);
         break;
-        case ready:
-        //something far in the future
+        case waiting:
+        return dispatcher(rdyq, NULL);
         break;
     }
     //something went wrong
     return NULL;
 }
 
-pcb_ptr isr(cpu_ptr this, que_ptr rdyq, pcb_ptr current) {
+pcb_ptr isr(que_ptr rdyq, pcb_ptr current) {
     //save state
-    current->pc = this->pc;
+    current->pc = pc;
     //set to interrupted
     current->state = interrupted;
     //call scheduler
-    pcb_ptr newcurrent = scheduler(this, rdyq, current, current->state);
+    pcb_ptr newcurrent = scheduler(rdyq, current, current->state);
     //pseudo push to stack
-    this->pc = pseudostack;
+    pc = pseudostack;
     return newcurrent;
 }
 
-int cpu_loop(cpu_ptr this) {
+int cpu_loop() {
      //make a loop, runs ?? times
-     int run = 100;
+     int run = 1;
      unsigned int pid = 0;
      unsigned int addto;
      //queues
      que_ptr enq = que_constructor();
      que_ptr rdyq = que_constructor();
+     que_ptr waiting = que_constructor();
      //create some initial values (PCBs)
      pid = sch_init_pcb(enq, pid);
      sch_ready(enq, rdyq);
@@ -153,7 +190,7 @@ int cpu_loop(cpu_ptr this) {
      pcb_ptr current = make_pcb(pid);
      pid = pid + 1;
      pseudostack = current->pc;
-     this->pc = pseudostack;
+     pc = pseudostack;
 
      while(run) {
          if(pid < 28) {
@@ -162,13 +199,27 @@ int cpu_loop(cpu_ptr this) {
             //move processes from the enqueueing queue to the ready queue
             sch_ready(enq, rdyq);
          }
-         //pseudo-run the process; ie add 3000-4000 to the PC
-         addto = ((rand() % 1000) + 3000);
-         this->pc = this->pc + addto;
+         pc = pc + 1;
+         if(timer()) {
+             //switch process
          //call isr -> scheduler -> dispatcher
-         current = isr(this, rdyq, current);
-         //timer interrupt
-         run = run - 1;
+             current = isr(rdyq, current);
+         }
+         if (io_interrupt(waiting)) {
+             scheduler(rdyq, q_dequeue(waiting));
+         }
+         int i;
+         for (i = 0; i < NUMTRAPS; i = i + 1) {
+            if (current->IO_1_TRAPS[i] == pc) {
+                current = io_trap_handle(rdy, waiting, current, 1);
+                break;
+            }
+            if (current->IO_2_TRAPS[i] == pc) {
+                current = io_trap_handle(rdy, waiting, current, 2);
+                break;
+            }
+         }
+         
      }
 
  }
