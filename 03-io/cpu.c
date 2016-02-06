@@ -206,7 +206,7 @@ int cpu_loop() {
              current = isr(rdyq, current);
          }
          if (io_interrupt(waiting)) {
-             scheduler(rdyq, q_dequeue(waiting));
+             q_enqueue(rdyq, q_dequeue(waiting));
          }
          int i;
          for (i = 0; i < NUMTRAPS; i = i + 1) {
