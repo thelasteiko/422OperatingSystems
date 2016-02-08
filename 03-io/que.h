@@ -2,7 +2,7 @@
 * que.h
 *
 *  Created on: January 10, 2016
-*      Author: Jason Hall
+*      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
 *     Version: January 10, 2016
 *
 *     Header file for Que.

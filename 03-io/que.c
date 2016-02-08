@@ -1,5 +1,11 @@
 /*
 * que.c
+*
+*  Created on: January 10, 2016
+*      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
+*     Version: January 10, 2016
+*
+*		Used for a FiFo que.
 */
 
 #include "pcb.h"

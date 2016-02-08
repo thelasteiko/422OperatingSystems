@@ -2,7 +2,7 @@
  * pcb.c
  *
  *  Created on: January 5 2016
- *      Author: Melinda Robertson
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *      Handles process control block functions to safely
