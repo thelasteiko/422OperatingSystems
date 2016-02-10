@@ -2,7 +2,7 @@
  * pcb.h
  *
  *  Created on: January 5, 2016
- *      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *     Header file for process memory block.
@@ -71,9 +71,9 @@ int pcb_set_creation (pcb_ptr this, time_t creation);
 time_t pcb_get_creation (pcb_ptr this);
 int pcb_set_termination (pcb_ptr this, time_t termination);
 time_t pcb_get_termination (pcb_ptr this);
-int pcb_set_terminate (pdb_ptr this, terminate);
+int pcb_set_terminate (pcb_ptr this, int terminate);
 int pcb_get_terminate (pcb_ptr this);
-int pcb_set_termcount (pcb_ptr this, termcount);
+int pcb_set_termcount (pcb_ptr this, int termcount);
 int pcb_get_termcount (pcb_ptr this);
 /*Set the register values for the process.*/
 int pcb_set_io1 (pcb_ptr this, int * io_1_traps);

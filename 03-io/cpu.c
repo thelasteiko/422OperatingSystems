@@ -1,7 +1,7 @@
 /* cpu.c
  *
  *  Created on: January 21 2016
- *      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *      Has a loop to simulate a CPU.
@@ -17,35 +17,36 @@
 #define MAXTIME 300
 //holds the PC value when changing PCBs
 unsigned int pseudostack;
+unsigned int pc = 0;
 int cntx = 0;
 int cntx2 = 0;
 int timer = MAXTIME;
 int iotime1 = 0, iotime2 = 0;
 
-int random(int min, int max) {
+int random1(int min, int max) {
     return (rand() % (max-min)) + min;
 }
 
 pcb_ptr make_pcb(int pid) {
     /*Create a randomized pcb with the pid.*/
     pcb_ptr node = pcb_constructor();
-    int pri = random(0, MAXPRI);
+    int pri = random1(0, MAXPRI);
     int st = ready;
-    int pc = random(MAXTIME, MAXTIME * 5);
-    int mpc = random(pc, pc * 5);
+    int pc = random1(MAXTIME, MAXTIME * 5);
+    int mpc = random1(pc, pc * 5);
     time_t cre;
     time(&cre);
-    int t2 = random(0, 15);
-    int last, i, next, j, k;
+    int t2 = random1(0, 15);
+    int last, i, next, k;
     int io1[NUMTRAPS];
     int io2[NUMTRAPS];
     last = pc;
     if (mpc - last < 1000) next = 50;
     else next = 100;
     for (i = 0; i < NUMTRAPS; i = i + 1) {
-        io1[i] = random(last, next);
-        k = random(last, next);
-        while(k == io1[i]) k = random(last, next);
+        io1[i] = random1(last, next);
+        k = random1(last, next);
+        while(k == io1[i]) k = random1(last, next);
         io2[i] = k;
         last = next;
         if (last > mpc-1000) next = next+50;
@@ -79,9 +80,9 @@ int sch_ready(que_ptr enq, que_ptr rdyq) {
     return 0;
 }
 
-int timer() {
+int interruptTimer() {
     if (timer == 0) {
-        time = MAXTIME;
+        timer = MAXTIME;
         return 1;
     }
     else timer = timer - 1;
@@ -91,12 +92,12 @@ int timer() {
 int io_interrupt(que_ptr waiting) {
     if (iotime1 == 0) {
         if (waiting->node_count > 0)
-            iotime1 = random(MAXTIME * 3, MAXTIME * 4);
+            iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
         return 1;
     }
     if (iotime2 == 0) {
         if (waiting->node_count > 0)
-            iotime1 = random(MAXTIME * 3, MAXTIME * 4);
+            iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
         return 1;
     }
     else {
@@ -104,17 +105,6 @@ int io_interrupt(que_ptr waiting) {
         iotime2 = iotime2 - 1;
     }
     return 0;
-}
-
-int io_trap_handle(que_ptr rdyq, que_ptr waiting, pcb_ptr node, int device) {
-    node->status = waiting;
-    if (device == 1 && iotime1 == 0)
-        iotime1 = random(MAXTIME * 3, MAXTIME * 4);
-    else if (device == 2 && iotime2 == 0)
-        iotime2 = random(MAXTIME * 3, MAXTIME * 4);
-    node->pc = pc;
-    q_enqueue(waiting);
-    return scheduler(rdyq, node, node->status);
 }
 
 pcb_ptr dispatcher(que_ptr rdyq, pcb_ptr that) {
@@ -146,8 +136,10 @@ pcb_ptr dispatcher(que_ptr rdyq, pcb_ptr that) {
     return current;
 }
 
+
+
 pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that,
-    enum state_type inter) {
+		enum state_type inter) {
     /*Determine what to do based on state.*/
     switch(inter) {
         case interrupted:
@@ -161,6 +153,19 @@ pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that,
     //something went wrong
     return NULL;
 }
+
+
+pcb_ptr io_trap_handle(que_ptr rdyq, que_ptr waiting_que, pcb_ptr node, int device) {
+    node->state = waiting;
+    if (device == 1 && iotime1 == 0)
+        iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
+    else if (device == 2 && iotime2 == 0)
+        iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
+    node->pc = pc;
+    q_enqueue(waiting_que, node);
+    return scheduler(rdyq, node, node->state);
+}
+
 
 pcb_ptr isr(que_ptr rdyq, pcb_ptr current) {
     //save state
@@ -178,7 +183,6 @@ int cpu_loop() {
      //make a loop, runs ?? times
      int run = 1;
      unsigned int pid = 0;
-     unsigned int addto;
      //queues
      que_ptr enq = que_constructor();
      que_ptr rdyq = que_constructor();
@@ -200,7 +204,7 @@ int cpu_loop() {
             sch_ready(enq, rdyq);
          }
          pc = pc + 1;
-         if(timer()) {
+         if(interruptTimer()) {
              //switch process
          //call isr -> scheduler -> dispatcher
              current = isr(rdyq, current);
@@ -211,20 +215,20 @@ int cpu_loop() {
          int i;
          for (i = 0; i < NUMTRAPS; i = i + 1) {
             if (current->IO_1_TRAPS[i] == pc) {
-                current = io_trap_handle(rdy, waiting, current, 1);
+                current = io_trap_handle(rdyq, waiting, current, 1);
                 break;
             }
             if (current->IO_2_TRAPS[i] == pc) {
-                current = io_trap_handle(rdy, waiting, current, 2);
+                current = io_trap_handle(rdyq, waiting, current, 2);
                 break;
             }
          }
          
      }
-
+     return 1;
  }
 int main() {
-	 cpu_ptr cpu1 = cpu_constructor();
-	 cpu_loop(cpu1);
+
+	 cpu_loop();
 	 return 0;
 }

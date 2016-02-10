@@ -2,7 +2,7 @@
 * que.c
 *
 *  Created on: January 10, 2016
-*      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
+*      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
 *     Version: January 10, 2016
 *
 *		Used for a FiFo que.
@@ -67,7 +67,7 @@ int que_destructor(que_ptr this) {
 }
 /*The information for the pcb's*/
 char * q_toString(que_ptr this) {
-	pcb_ptr curr_pcb = NULL;
+	//pcb_ptr curr_pcb = NULL;
 	node_ptr node = NULL;
 
     if (!this) return "NO Q";

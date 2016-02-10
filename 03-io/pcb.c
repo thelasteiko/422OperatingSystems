@@ -2,7 +2,7 @@
  * pcb.c
  *
  *  Created on: January 5 2016
- *      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *      Handles process control block functions to safely
@@ -109,7 +109,7 @@ int pcb_set_termination (pcb_ptr this, time_t termination) {
 time_t pcb_get_termination (pcb_ptr this) {
     return this->termination;
 }
-int pcb_set_terminate (pdb_ptr this, int terminate) {
+int pcb_set_terminate (pcb_ptr this, int terminate) {
     this->terminate = terminate;
     return 0;
 }
@@ -129,7 +129,6 @@ int pcb_set_io1 (pcb_ptr this, int * io_1_traps) {
 }
 int * pcb_get_io1 (pcb_ptr this) {
     int * traps = (int *) malloc(sizeof(int) * NUMTRAPS);
-    if (!reg) error_handle("Cannot get register values.", 4, 0);
     memcpy(traps, this->IO_1_TRAPS, NUMTRAPS);
     return traps;
 }
@@ -140,7 +139,6 @@ int pcb_set_io2 (pcb_ptr this, int * io_2_traps) {
 }
 int * pcb_get_io2 (pcb_ptr this) {
     int * traps = (int *) malloc(sizeof(int) * NUMTRAPS);
-    if (!reg) error_handle("Cannot get register values.", 4, 0);
     memcpy(traps, this->IO_2_TRAPS, NUMTRAPS);
     return traps;
 }
