@@ -2,7 +2,7 @@
  * pcb.h
  *
  *  Created on: January 5, 2016
- *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
+ *      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *     Header file for process memory block.

@@ -1,7 +1,7 @@
 /* cpu.c
  *
  *  Created on: January 21 2016
- *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
+ *      Author: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
  *     Version: February 4 2016
  *
  *      Has a loop to simulate a CPU.
