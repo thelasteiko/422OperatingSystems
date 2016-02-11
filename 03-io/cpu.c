@@ -37,14 +37,19 @@ pcb_ptr make_pcb(int pid) {
     time_t cre;
     time(&cre);
     int t2 = random1(0, 15);
-    int last, i, next, k;
+    unsigned int last, i, next, k;
     int io1[NUMTRAPS];
     int io2[NUMTRAPS];
     last = pc;
     if (mpc - last < 1000) next = 50;
     else next = 100;
+
     for (i = 0; i < NUMTRAPS; i = i + 1) {
+    	if (last > next) {
+    		next = next + last;
+    	}
         io1[i] = random1(last, next);
+        //printf("last = %d next = %d random # produced = %d\n", last, next,io1[i]);
         k = random1(last, next);
         while(k == io1[i]) k = random1(last, next);
         io2[i] = k;
@@ -149,6 +154,10 @@ pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that,
         case waiting:
         return dispatcher(rdyq, NULL);
         break;
+        case dead:
+        //put in deadq and return next rdyq pcb
+        return dispatcher(rdyq, NULL);
+        break;
     }
     //something went wrong
     return NULL;
@@ -180,16 +189,28 @@ pcb_ptr isr(que_ptr rdyq, pcb_ptr current) {
 }
 
 int cpu_loop() {
+	 printf("I STARTED\n");
      //make a loop, runs ?? times
-     int run = 1;
+     int run = 100000;
      unsigned int pid = 0;
      //queues
      que_ptr enq = que_constructor();
      que_ptr rdyq = que_constructor();
      que_ptr waiting = que_constructor();
+     que_ptr deadq = que_constructor();
+     time_t rawTime;
+     struct tm * timeinfo;
+     time(&rawTime);
+     timeinfo = localtime (&rawTime);
      //create some initial values (PCBs)
+     printf("Created queues\n");
+
      pid = sch_init_pcb(enq, pid);
+
+     printf("Process created: PID %d at %s", pid, asctime  (timeinfo));
+
      sch_ready(enq, rdyq);
+
      //set an initial PCB
      pcb_ptr current = make_pcb(pid);
      pid = pid + 1;
@@ -204,18 +225,40 @@ int cpu_loop() {
             sch_ready(enq, rdyq);
          }
          pc = pc + 1;
+         //if the current->pc is = maxPc then termcount++, c->pc = 0
+         //if the termcount == terminate then current = isr(rdyq,current)
+         printf("Timer: %d\n", timer);
          if(interruptTimer()) {
              //switch process
          //call isr -> scheduler -> dispatcher
              current = isr(rdyq, current);
+             printf("Timer interrupt: PID %d at %s", pid, asctime (timeinfo));
          }
+         if (current->pc == current->max_pc) {
+        	 current->termcount = current->termcount + 1;
+        	 current->pc = 0;
+
+         }
+         //printf("HERE\n");
+         if (current->termcount == current->terminate) {
+        	 current->state = dead;
+        	 q_enqueue(deadq, current);
+        	 current = scheduler(rdyq, NULL, current->state);
+        	 printf("Process terminated: PID %d at %s", pid, asctime (timeinfo));
+         }
+         printf("after term\n");
          if (io_interrupt(waiting)) {
+        	 if (waiting->node_count > 0) {
+        		 printf("I/O completion interrupt: PID %d is running, PID %d put in ready queue\n",
+        		             		current->pid, q_peek(waiting)->pid);
+        	 }
              q_enqueue(rdyq, q_dequeue(waiting));
          }
          int i;
          for (i = 0; i < NUMTRAPS; i = i + 1) {
             if (current->IO_1_TRAPS[i] == pc) {
                 current = io_trap_handle(rdyq, waiting, current, 1);
+                printf("");
                 break;
             }
             if (current->IO_2_TRAPS[i] == pc) {
@@ -223,7 +266,7 @@ int cpu_loop() {
                 break;
             }
          }
-         
+         run = run - 1;
      }
      return 1;
  }

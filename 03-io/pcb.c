@@ -17,7 +17,6 @@
 
 int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
-    if (critical) exit(error_code);
     return error_code;
 }
 pcb_ptr pcb_constructor() {
@@ -52,6 +51,8 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->max_pc = max_pc;
         this->creation = creation;
         this->terminate = terminate;
+//        this->IO_1_TRAPS = IO_1_TRAPS;
+//        this->IO_2_TRAPS = IO_2_TRAPS;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
         return 0;
@@ -124,7 +125,11 @@ int pcb_get_termcount (pcb_ptr this) {
     return this->termcount;
 }
 int pcb_set_io1 (pcb_ptr this, int * io_1_traps) {
-    memcpy(this->IO_1_TRAPS, io_1_traps, NUMTRAPS);
+	int i;
+	for (i = 0; i < NUMTRAPS; i++) {
+		this->IO_1_TRAPS[i] = io_1_traps[i];
+	}
+    //memcpy(this->IO_1_TRAPS, io_1_traps, NUMTRAPS);
     return 0;
 }
 int * pcb_get_io1 (pcb_ptr this) {
@@ -134,7 +139,11 @@ int * pcb_get_io1 (pcb_ptr this) {
 }
 
 int pcb_set_io2 (pcb_ptr this, int * io_2_traps) {
-    memcpy(this->IO_2_TRAPS, io_2_traps, NUMTRAPS);
+	int i;
+	for (i = 0; i < NUMTRAPS; i++) {
+		this->IO_2_TRAPS[i] = io_2_traps[i];
+	}
+    //memcpy(this->IO_2_TRAPS, io_2_traps, NUMTRAPS);
     return 0;
 }
 int * pcb_get_io2 (pcb_ptr this) {
@@ -173,6 +182,9 @@ char * pcb_toString(pcb_ptr this) {
             "MPC: %p, CRE: %d, T1: %d, T2: %d, TC: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
         pri, id, st, pc, mpc, cre, t1, t2, tc,
-        io1[0],io1[1],io1[2],io1[3],io2[0],io2[1],io2[2],io2[3]);
+       // io1[0],io1[1],io1[2],io1[3],io2[0],io2[1],io2[2],io2[3]
+        this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
+        this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3]
+        );
     return str;
 }
