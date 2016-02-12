@@ -15,10 +15,9 @@
 
 #define NUMTRAPS 4
 #define MAXPRI 15
-#define address int
 /*Possible states a process can be in. Default is dead.*/
 enum state_type {
-  ready, running, interrupted, waiting, dead
+  ready, running, interrupted, wait1, wait2, ioready1, ioready2, dead
 };
 /*
  * Process control block data type. Holds everything
@@ -28,8 +27,8 @@ typedef struct pcb_type {
     int pid;
     int priority;
     enum state_type state;
-    address pc;
-    address max_pc;
+    unsigned int pc;
+    unsigned int max_pc;
     time_t creation; //when it was created
     time_t termination; //when it is terminated
     int terminate; //how many cycles until process stops; 0 for infinity
@@ -42,7 +41,7 @@ typedef pcb * pcb_ptr;
 pcb_ptr pcb_constructor();
 /*Initializes the values of a pcb.*/
 int pcb_initialize(pcb_ptr this, int pid, int priority,
-    enum state_type state, address pc, address max_pc,
+    enum state_type state, unsigned int pc, unsigned int max_pc,
     time_t creation, int terminate,
     int * IO_1_TRAPS, int * IO_2_TRAPS);
 /*Set the process id.*/
@@ -61,12 +60,12 @@ enum state_type pcb_get_state  (pcb_ptr this);
  * Set the location of the next line of code to run
  * in the current process. Given as a void *
  */
-int pcb_set_pc (pcb_ptr this, address pc);
+int pcb_set_pc (pcb_ptr this, unsigned int pc);
 /*Get the location of the next line of code for this process.*/
-address pcb_get_pc (pcb_ptr this);
+unsigned int pcb_get_pc (pcb_ptr this);
 /*MORE FIELDS!!!!!!*/
-int pcb_set_max_pc (pcb_ptr this, address max_pc);
-address pcb_get_max_pc (pcb_ptr this);
+int pcb_set_max_pc (pcb_ptr this, unsigned int max_pc);
+unsigned int pcb_get_max_pc (pcb_ptr this);
 int pcb_set_creation (pcb_ptr this, time_t creation);
 time_t pcb_get_creation (pcb_ptr this);
 int pcb_set_termination (pcb_ptr this, time_t termination);

@@ -51,8 +51,8 @@ int q_enqueue(que_ptr this, pcb_ptr new_node) {
 pcb_ptr q_dequeue(que_ptr this) {
 	pcb_ptr p = (pcb_ptr) this->first_node->my_pcb;
 	if (p != NULL) {
-		this -> first_node = this -> first_node -> next_node;
-		this -> node_count = this -> node_count - 1;
+		this->first_node = this->first_node->next_node;
+		this->node_count = this->node_count - 1;
 	}
 	return p;
 }

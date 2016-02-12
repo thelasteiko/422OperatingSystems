@@ -41,7 +41,7 @@ pcb_ptr pcb_constructor() {
     return p;
 }
 int pcb_initialize(pcb_ptr this, int pid, int priority,
-    enum state_type state, address pc, address max_pc,
+    enum state_type state, unsigned int pc, unsigned int max_pc,
     time_t creation, int terminate,
     int * IO_1_TRAPS, int * IO_2_TRAPS) {
         this->pid = pid;
@@ -78,22 +78,22 @@ int pcb_set_state (pcb_ptr this, enum state_type state) {
     return 0;
 }
 enum state_type pcb_get_state (pcb_ptr this) {
-    if (this->state < 0 || this->state > 4)
+    if (this->state < ready || this->state > dead)
         return error_handle ("Invalid state.", -1, 0);
     return this->state;
 }
-int pcb_set_pc (pcb_ptr this, address pc) {
+int pcb_set_pc (pcb_ptr this, unsigned int pc) {
     this->pc = pc;
     return 0;
 }
-address pcb_get_pc (pcb_ptr this) {
+unsigned int pcb_get_pc (pcb_ptr this) {
     return this->pc;
 }
-int pcb_set_max_pc (pcb_ptr this, address max_pc) {
+int pcb_set_max_pc (pcb_ptr this, unsigned int max_pc) {
     this->max_pc = max_pc;
     return 0;
 }
-address pcb_get_max_pc (pcb_ptr this) {
+unsigned int pcb_get_max_pc (pcb_ptr this) {
     return this->max_pc;
 }
 int pcb_set_creation (pcb_ptr this, time_t creation) {
@@ -153,15 +153,13 @@ int * pcb_get_io2 (pcb_ptr this) {
 }
 
 int pcb_destructor(pcb_ptr this) {
-    if (this->IO_1_TRAPS) free (this->IO_1_TRAPS);
-    if (this->IO_2_TRAPS) free (this->IO_2_TRAPS);
     free (this);
     return 0;
 }
 char * pcb_toString(pcb_ptr this) {
     char * str, r;
     int pri, st, id, cre, t1, t2, tc;
-    address pc, mpc;
+    unsigned int pc, mpc;
     int * io1;
     int * io2;
     str = (char *) malloc(sizeof(char) * 80);
@@ -178,8 +176,8 @@ char * pcb_toString(pcb_ptr this) {
     io1 = pcb_get_io1(this);
     io2 = pcb_get_io2(this);
     
-    sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %p, "
-            "MPC: %p, CRE: %d, T1: %d, T2: %d, TC: %d, "
+    sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %d, "
+            "MPC: %d, CRE: %d, T1: %d, T2: %d, TC: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
         pri, id, st, pc, mpc, cre, t1, t2, tc,
        // io1[0],io1[1],io1[2],io1[3],io2[0],io2[1],io2[2],io2[3]
