@@ -141,7 +141,7 @@ pcb_ptr idle_process () {
 pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
     current->pc = pseudostack;
     if (cntx >= 3) {
-    printf("Switching from: %s\r\n", pcb_toString(current));
+        printf("\r\nSwitching from: %s\r\n", pcb_toString(current));
         cntx = 0;
     } else if (cntx <= 3) {
         cntx = cntx + 1;
@@ -150,7 +150,8 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
     if (current->pid == -1)
         pcb_destructor(current);
     else q_enqueue(to, current);
-    printf("%s\r\n", q_toString(to));
+    
+    printf("To %s\r\n", q_toString(to));
     
     pcb_ptr next = NULL;
     if(from->node_count > 0)
@@ -174,7 +175,6 @@ pcb_ptr scheduler(pcb_ptr current, enum state_type inter) {
     pseudostack = pc;
     switch(inter) {
         case interrupted:
-        //printf("Interrupted: %s\n", pcb_toString(current));
         current->state = ready;
         next = dispatcher(rdyq, rdyq, current);
         next->state = running;
@@ -184,14 +184,12 @@ pcb_ptr scheduler(pcb_ptr current, enum state_type inter) {
         case wait1:
         next = dispatcher(iowait1, rdyq, current);
         next->state = running;
-        //printf("Waiting: %s\n", pcb_toString(next));
         pseudostack = next->pc;
         break;
         
         case wait2:
         next = dispatcher(iowait2, rdyq, current);
         next->state = running;
-        //printf("Waiting: %s\n", pcb_toString(next));
         pseudostack = next->pc;
         break;
         
@@ -199,8 +197,6 @@ pcb_ptr scheduler(pcb_ptr current, enum state_type inter) {
         next = q_dequeue(iowait1);
         next->state = ready;
         q_enqueue(rdyq, next);
-        //printf("IO 1 Ready: PID %d\n", q_peek(rdyq)->pid);
-        //printf("%s\n", q_toString(rdyq));
         break;
         
         case ioready2:
@@ -211,7 +207,6 @@ pcb_ptr scheduler(pcb_ptr current, enum state_type inter) {
         
         case dead:
         //put in deadq and return next rdyq pcb
-        //printf("Dead: %s\n", pcb_toString(current));
         next = dispatcher(deadq, rdyq, current);
         next->state = running;
         pseudostack = next->pc;
@@ -239,17 +234,13 @@ pcb_ptr io_trap_handle(pcb_ptr current, int device) {
 pcb_ptr time_inter_handle(pcb_ptr current) {
     current->state = interrupted;
     pcb_ptr next = scheduler(current, current->state);
-    //printf("Time Returning: %s\n", pcb_toString(next));
     return next;
 }
 
 pcb_ptr term_inter_handle (pcb_ptr current) {
     current->state = dead;
     time(&current->termination);
-    //pcb_ptr next = scheduler(current, current->state);
-    //printf("Terminate Returning: %s\n", pcb_toString(next));
     return scheduler(current, current->state);
-    //return current;
 }
 
 pcb_ptr io_inter_handle (pcb_ptr current, enum state_type device) {
@@ -261,12 +252,12 @@ int cpu_loop () {
     printf("Starting...\r\n");
     int run = 10000;
     unsigned int pid = 0;
-    time_t rawTime;
-    struct tm * timeinfo;
-    time(&rawTime);
-    timeinfo = localtime(&rawTime);
+    long rawTime;
+    struct timespec timeinfo;
+    clock_gettime(CLOCK_REALTIME, &timeinfo);
+    rawTime = timeinfo.tv_nsec;
     pid = sch_init_pcb(pid);
-     printf("Process created: PID %d at %s\r\n", pid, asctime  (timeinfo));
+     printf("Process created: PID %d at %ld\r\n", pid, rawTime);
      sch_ready();
      pcb_ptr current = make_pcb(pid);
      pid = pid+1;
@@ -274,52 +265,51 @@ int cpu_loop () {
      pc = pseudostack;
      
      while (run) {
-        time(&rawTime);
-        timeinfo = localtime(&rawTime);
+        clock_gettime(CLOCK_REALTIME, &timeinfo);
+        rawTime = timeinfo.tv_nsec;
          if(pid < 30) {
             pid = sch_init_pcb(pid);
             sch_ready();
          }
          pc = pc + 1;
-         //printf("Timer: %d\n", timer);
          if(time_inter()) {
-             printf("Timer interrupt: PID %d at %s\r\n", current->pid, asctime (timeinfo));
+             printf("Timer interrupt: PID %d at %ld\r\n", current->pid, rawTime);
              current = time_inter_handle(current);
          }
-         //current->pc = pc;
          if (current->pc >= current->max_pc) {
              current->termcount = current->termcount + 1;
              current->pc = 0;
          }
          if (current->termcount >= current->terminate) {
-             printf("Process terminated: PID %d at %s\r\n", current->pid, asctime (timeinfo));
+             printf("Process terminated: PID %d at %ld\r\n", current->pid, rawTime);
+             pcb_set_termination(current, rawTime);
              current = term_inter_handle(current);
          }
          if (io_1_inter()) {
-             printf("IO 1 Complete: PID %d at %s\r\n", q_peek(iowait1)->pid, asctime (timeinfo));
+             printf("IO 1 Complete: PID %d at %ld\r\n", q_peek(iowait1)->pid, rawTime);
              current = io_inter_handle(current, ioready1);
              //printf("%s\n", q_toString(rdyq));
          }
          if (io_2_inter()) {
-             printf("IO 2 Complete: PID %d at %s\r\n", q_peek(iowait2)->pid, asctime (timeinfo));
+             printf("IO 2 Complete: PID %d at %ld\r\n", q_peek(iowait2)->pid, rawTime);
              current = io_inter_handle(current, ioready2);
              //printf("%s\n", q_toString(rdyq));
          }
          int i;
          for (i = 0; i < NUMTRAPS; i = i + 1) {
             if (current->IO_1_TRAPS[i] == pc) {
-                printf("IO 1 Trap: PID %d at %s\r\n", current->pid, asctime (timeinfo));
+                printf("IO 1 Trap: PID %d at %ld\r\n", current->pid, rawTime);
                 current = io_trap_handle(current, 1);
                 break;
             }
             if (current->IO_2_TRAPS[i] == pc) {
-                printf("IO 2 Trap: PID %d at %s\r\n", current->pid, asctime (timeinfo));
+                printf("IO 2 Trap: PID %d at %ld\r\n", current->pid, rawTime);
                 current = io_trap_handle(current, 2);
                 break;
             }
          }
-         run = run - 1;
-         //if (rdyq->node_count == 0) break;
+         //run = run - 1;
+         if (deadq->node_count == 10) break;
      }
      
      printf("Ready: %s\r\n", q_toString(rdyq));

@@ -29,8 +29,8 @@ typedef struct pcb_type {
     enum state_type state;
     unsigned int pc;
     unsigned int max_pc;
-    time_t creation; //when it was created
-    time_t termination; //when it is terminated
+    long creation; //when it was created
+    long termination; //when it is terminated
     int terminate; //how many cycles until process stops; 0 for infinity
     int termcount; //how many time max_pc is passed
     int IO_1_TRAPS[NUMTRAPS];
@@ -42,7 +42,7 @@ pcb_ptr pcb_constructor();
 /*Initializes the values of a pcb.*/
 int pcb_initialize(pcb_ptr this, int pid, int priority,
     enum state_type state, unsigned int pc, unsigned int max_pc,
-    time_t creation, int terminate,
+    long creation, int terminate,
     int * IO_1_TRAPS, int * IO_2_TRAPS);
 /*Set the process id.*/
 int pcb_set_pid (pcb_ptr this, int pid);
@@ -66,10 +66,10 @@ unsigned int pcb_get_pc (pcb_ptr this);
 /*MORE FIELDS!!!!!!*/
 int pcb_set_max_pc (pcb_ptr this, unsigned int max_pc);
 unsigned int pcb_get_max_pc (pcb_ptr this);
-int pcb_set_creation (pcb_ptr this, time_t creation);
-time_t pcb_get_creation (pcb_ptr this);
-int pcb_set_termination (pcb_ptr this, time_t termination);
-time_t pcb_get_termination (pcb_ptr this);
+int pcb_set_creation (pcb_ptr this, long creation);
+long pcb_get_creation (pcb_ptr this);
+int pcb_set_termination (pcb_ptr this, long termination);
+long pcb_get_termination (pcb_ptr this);
 int pcb_set_terminate (pcb_ptr this, int terminate);
 int pcb_get_terminate (pcb_ptr this);
 int pcb_set_termcount (pcb_ptr this, int termcount);

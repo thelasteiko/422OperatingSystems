@@ -27,8 +27,10 @@ pcb_ptr pcb_constructor() {
     p->state = dead;
     p->pc = 0;
     p->max_pc = 0;
-    time(&p->creation);
-    time(&p->termination);
+    struct timespec timeinfo;
+    clock_gettime(CLOCK_REALTIME, &timeinfo);
+    p->creation = timeinfo.tv_nsec;
+    p->termination = timeinfo.tv_nsec;
     p->terminate = 0;
     p->termcount = 0;
     int reg[NUMTRAPS];
@@ -42,7 +44,7 @@ pcb_ptr pcb_constructor() {
 }
 int pcb_initialize(pcb_ptr this, int pid, int priority,
     enum state_type state, unsigned int pc, unsigned int max_pc,
-    time_t creation, int terminate,
+    long creation, int terminate,
     int * IO_1_TRAPS, int * IO_2_TRAPS) {
         this->pid = pid;
         this->priority = priority;
@@ -51,8 +53,6 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->max_pc = max_pc;
         this->creation = creation;
         this->terminate = terminate;
-//        this->IO_1_TRAPS = IO_1_TRAPS;
-//        this->IO_2_TRAPS = IO_2_TRAPS;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
         return 0;
@@ -96,14 +96,14 @@ int pcb_set_max_pc (pcb_ptr this, unsigned int max_pc) {
 unsigned int pcb_get_max_pc (pcb_ptr this) {
     return this->max_pc;
 }
-int pcb_set_creation (pcb_ptr this, time_t creation) {
+int pcb_set_creation (pcb_ptr this, long creation) {
     this->creation = creation;
     return 0;
 }
 time_t pcb_get_creation (pcb_ptr this) {
     return this->creation;
 }
-int pcb_set_termination (pcb_ptr this, time_t termination) {
+int pcb_set_termination (pcb_ptr this, long termination) {
     this->termination = termination;
     return 0;
 }
@@ -129,12 +129,14 @@ int pcb_set_io1 (pcb_ptr this, int * io_1_traps) {
 	for (i = 0; i < NUMTRAPS; i++) {
 		this->IO_1_TRAPS[i] = io_1_traps[i];
 	}
-    //memcpy(this->IO_1_TRAPS, io_1_traps, NUMTRAPS);
     return 0;
 }
 int * pcb_get_io1 (pcb_ptr this) {
     int * traps = (int *) malloc(sizeof(int) * NUMTRAPS);
-    memcpy(traps, this->IO_1_TRAPS, NUMTRAPS);
+    int i = 0;
+    for (; i < NUMTRAPS; i++) {
+        traps[i] = this->IO_1_TRAPS[i];
+    }
     return traps;
 }
 
@@ -143,12 +145,14 @@ int pcb_set_io2 (pcb_ptr this, int * io_2_traps) {
 	for (i = 0; i < NUMTRAPS; i++) {
 		this->IO_2_TRAPS[i] = io_2_traps[i];
 	}
-    //memcpy(this->IO_2_TRAPS, io_2_traps, NUMTRAPS);
     return 0;
 }
 int * pcb_get_io2 (pcb_ptr this) {
     int * traps = (int *) malloc(sizeof(int) * NUMTRAPS);
-    memcpy(traps, this->IO_2_TRAPS, NUMTRAPS);
+    int i = 0;
+    for (; i < NUMTRAPS; i++) {
+        traps[i] = this->IO_2_TRAPS[i];
+    }
     return traps;
 }
 
@@ -177,10 +181,9 @@ char * pcb_toString(pcb_ptr this) {
     io2 = pcb_get_io2(this);
     
     sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %d, "
-            "MPC: %d, CRE: %d, T1: %d, T2: %d, TC: %d, "
+            "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
         pri, id, st, pc, mpc, cre, t1, t2, tc,
-       // io1[0],io1[1],io1[2],io1[3],io2[0],io2[1],io2[2],io2[3]
         this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
         this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3]
         );
