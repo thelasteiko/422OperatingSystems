@@ -1,3 +1,5 @@
+Authors: Melinda Robertson, Chetanya Chopra, Jason Hall, Shewangizaw Gebremariam
+
 Starting...
 Process created: PID 2 at 127410900
 

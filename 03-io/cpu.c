@@ -16,14 +16,18 @@
 
 #define MAXTIME 300
 //holds the PC value when changing PCBs
-unsigned int pseudostack;
+unsigned int pseudostack = 0;
 unsigned int pc = 0;
 int cntx = 0;
 int cntx2 = 0;
 int timer = MAXTIME;
 int iotime1 = 0, iotime2 = 0;
 
-
+que_ptr enq;
+que_ptr rdyq;
+que_ptr iowait1;
+que_ptr iowait2;
+que_ptr deadq;
 
 int random1(int min, int max) {
     return (rand() % (max-min)) + min;
@@ -34,11 +38,12 @@ pcb_ptr make_pcb(int pid) {
     pcb_ptr node = pcb_constructor();
     int pri = random1(0, MAXPRI);
     int st = ready;
-    int pc = random1(MAXTIME, MAXTIME * 5);
-    int mpc = random1(pc, pc * 5);
+    unsigned int pc = 0;//(unsigned int) random1(MAXTIME, MAXTIME * 5);
+    unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 8);
+    //pc = 0;
     time_t cre;
     time(&cre);
-    int t2 = random1(0, 15);
+    int t2 = random1(2, 15);
     unsigned int last, i, next, k;
     int io1[NUMTRAPS];
     int io2[NUMTRAPS];
@@ -64,7 +69,7 @@ pcb_ptr make_pcb(int pid) {
     return node;
 }
 
-int sch_init_pcb(que_ptr enq, int pid) {
+int sch_init_pcb(int pid) {
     /*Initialize some PCBs to be run.*/
     int i = (rand()) % 6;
     while(i) {
@@ -76,7 +81,7 @@ int sch_init_pcb(que_ptr enq, int pid) {
     return pid;
 }
 
-int sch_ready(que_ptr enq, que_ptr rdyq) {
+int sch_ready () {
     /*Move all items from the enqueueing queue to the ready queue.*/
 	printf("\r\nEnqueing %d pcb's.\r\n", enq->node_count);
 	while(enq->node_count) {
@@ -87,7 +92,7 @@ int sch_ready(que_ptr enq, que_ptr rdyq) {
     return 0;
 }
 
-int interruptTimer() {
+int time_inter () {
     if (timer == 0) {
         timer = MAXTIME;
         return 1;
@@ -96,176 +101,234 @@ int interruptTimer() {
     return 0;
 }
 
-int io_interrupt(que_ptr waiting) {
+int io_1_inter () {
+    //printf("IO 1 Time: %d\n", iotime1);
     if (iotime1 == 0) {
-        if (waiting->node_count > 0)
-            iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
+        iotime1 = random1(MAXTIME * 2, MAXTIME * 3);
         return 1;
     }
-    if (iotime2 == 0) {
-        if (waiting->node_count > 0)
-            iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
-        return 1;
-    }
-    else {
+    else if (iowait1->node_count > 0)
         iotime1 = iotime1 - 1;
-        iotime2 = iotime2 - 1;
-    }
     return 0;
 }
 
-pcb_ptr dispatcher(que_ptr rdyq, pcb_ptr that) {
-    /*Move the current PCB to the ready queue and return the next one.*/
-    if (that) {
-        that->pc = pc;
-        q_enqueue(rdyq, that);
-
-        if (cntx >= 3) {
-            printf("\r\n%s Switching to: %s", pcb_toString(that), pcb_toString(q_peek(rdyq)));
-            cntx = 0;
-        } else if (cntx <= 3) {
-            cntx = cntx + 1;
-        }
+int io_2_inter () {
+    if (iotime2 == 0) {
+        iotime2 = random1(MAXTIME * 2, MAXTIME * 3);
+        return 1;
     }
+    else if (iowait2->node_count > 0)
+        iotime2 = iotime2 - 1;
+    return 0;
+}
 
-    pcb_ptr current = q_dequeue(rdyq);
-    current->state = running;
-    pseudostack = current->pc;
+pcb_ptr idle_process () {
+    pcb_ptr idle = pcb_constructor();
+    time_t cre;
+    time(&cre);
+    int io1[NUMTRAPS];
+    int io2[NUMTRAPS];
+    int i;
+    for (i = 0; i < NUMTRAPS; i = i + 1) {
+        io1[i] = -1;
+        io2[i] = -1;
+    }
+    pcb_initialize(idle,-1,15, running, 0, 10,
+        cre, 1, io1, io2);
+    return idle;
+}
 
+pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
+    current->pc = pseudostack;
+    if (cntx >= 3) {
+        printf("\r\nSwitching from: %s\r\n", pcb_toString(current));
+        cntx = 0;
+    } else if (cntx <= 3) {
+        cntx = cntx + 1;
+    }
+    
+    if (current->pid == -1)
+        pcb_destructor(current);
+    else q_enqueue(to, current);
+    
+    printf("To %s\r\n", q_toString(to));
+    
+    pcb_ptr next = NULL;
+    if(from->node_count > 0)
+        next = q_dequeue(from);
+    if (!next) next = idle_process();
+    
+    pseudostack = next->pc;
     if (cntx2 >= 3) {
-		printf("\r\n%s Switching to: %s\r\n", pcb_toString(that), pcb_toString(current));
-		printf("%s\r\n", q_toString(rdyq));
+		printf("Switching to: %s\r\n", pcb_toString(next));
+		printf("%s\r\n\r\n", q_toString(from));
 		cntx2 = 0;
 	} else if (cntx2 <= 3) {
 		cntx2 = cntx2 + 1;
 	}
+    return next;
+}
 
+pcb_ptr scheduler(pcb_ptr current, enum state_type inter) {
+    /*Determine what to do based on state.*/
+    pcb_ptr next = NULL;
+    pseudostack = pc;
+    switch(inter) {
+        case interrupted:
+        current->state = ready;
+        next = dispatcher(rdyq, rdyq, current);
+        next->state = running;
+        pseudostack = next->pc;
+        break;
+        
+        case wait1:
+        next = dispatcher(iowait1, rdyq, current);
+        next->state = running;
+        pseudostack = next->pc;
+        break;
+        
+        case wait2:
+        next = dispatcher(iowait2, rdyq, current);
+        next->state = running;
+        pseudostack = next->pc;
+        break;
+        
+        case ioready1:
+        next = q_dequeue(iowait1);
+        next->state = ready;
+        q_enqueue(rdyq, next);
+        break;
+        
+        case ioready2:
+        next = q_dequeue(iowait2);
+        next->state = ready;
+        q_enqueue(rdyq, next);
+        break;
+        
+        case dead:
+        //put in deadq and return next rdyq pcb
+        next = dispatcher(deadq, rdyq, current);
+        next->state = running;
+        pseudostack = next->pc;
+        break;
+    }
+    pc = pseudostack;
+    return next;
+}
+
+pcb_ptr io_trap_handle(pcb_ptr current, int device) {
+    if (device == 1) {
+        if (iotime1 == 0)
+            iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
+        current->state = wait1;
+    }
+    else if (device == 2) {
+        if (iotime2 == 0)
+            iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
+        current->state = wait2;
+    }
+    return scheduler(current, current->state);
+    //return current;
+}
+
+pcb_ptr time_inter_handle(pcb_ptr current) {
+    current->state = interrupted;
+    pcb_ptr next = scheduler(current, current->state);
+    return next;
+}
+
+pcb_ptr term_inter_handle (pcb_ptr current) {
+    current->state = dead;
+    time(&current->termination);
+    return scheduler(current, current->state);
+}
+
+pcb_ptr io_inter_handle (pcb_ptr current, enum state_type device) {
+    scheduler(current, device);
     return current;
 }
 
-
-
-pcb_ptr scheduler(que_ptr rdyq, pcb_ptr that,
-		enum state_type inter) {
-    /*Determine what to do based on state.*/
-    switch(inter) {
-        case interrupted:
-        that->state = ready;
-        return dispatcher(rdyq, that);
-        break;
-        case waiting:
-        return dispatcher(rdyq, NULL);
-        break;
-        case dead:
-        //put in deadq and return next rdyq pcb
-        return dispatcher(rdyq, NULL);
-        break;
-    }
-    //something went wrong
-    return NULL;
-}
-
-
-pcb_ptr io_trap_handle(que_ptr rdyq, que_ptr waiting_que, pcb_ptr node, int device) {
-    node->state = waiting;
-    if (device == 1 && iotime1 == 0)
-        iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
-    else if (device == 2 && iotime2 == 0)
-        iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
-    node->pc = pc;
-    q_enqueue(waiting_que, node);
-    return scheduler(rdyq, node, node->state);
-}
-
-
-pcb_ptr isr(que_ptr rdyq, pcb_ptr current) {
-    //save state
-    current->pc = pc;
-    //set to interrupted
-    current->state = interrupted;
-    //call scheduler
-    pcb_ptr newcurrent = scheduler(rdyq, current, current->state);
-    //pseudo push to stack
-    pc = pseudostack;
-    return newcurrent;
-}
-
-int cpu_loop() {
-	 printf("I STARTED\n");
-     //make a loop, runs ?? times
-     int run = 10000;
-     unsigned int pid = 0;
-     //queues
-     que_ptr enq = que_constructor();
-     que_ptr rdyq = que_constructor();
-     que_ptr waiting = que_constructor();
-     que_ptr deadq = que_constructor();
-     time_t rawTime;
-     struct tm * timeinfo;
-     time(&rawTime);
-     timeinfo = localtime (&rawTime);
-     //create some initial values (PCBs)
-     printf("Created queues\n");
-     pid = sch_init_pcb(enq, pid);
-     printf("Process created: PID %d at %s", pid, asctime  (timeinfo));
-     sch_ready(enq, rdyq);
-     //set an initial PCB
+int cpu_loop () {
+    printf("Starting...\r\n");
+    int run = 10000;
+    unsigned int pid = 0;
+    long rawTime;
+    struct timespec timeinfo;
+    clock_gettime(CLOCK_REALTIME, &timeinfo);
+    rawTime = timeinfo.tv_nsec;
+    pid = sch_init_pcb(pid);
+     printf("Process created: PID %d at %ld\r\n", pid, rawTime);
+     sch_ready();
      pcb_ptr current = make_pcb(pid);
-     pid = pid + 1;
+     pid = pid+1;
      pseudostack = current->pc;
      pc = pseudostack;
-
-   while(run) {
-         if(pid < 28) {
-            //create 0-5 processes; add to enqueueing queue
-            pid = sch_init_pcb(enq, pid);
-            //move processes from the enqueueing queue to the ready queue
-            sch_ready(enq, rdyq);
+     
+     while (run) {
+        clock_gettime(CLOCK_REALTIME, &timeinfo);
+        rawTime = timeinfo.tv_nsec;
+         if(pid < 30) {
+            pid = sch_init_pcb(pid);
+            sch_ready();
          }
          pc = pc + 1;
-         printf("Timer: %d\n", timer);
-         if(interruptTimer()) {
-             current = isr(rdyq, current);
-             printf("Timer interrupt: PID %d at %s", pid, asctime (timeinfo));
+         if(time_inter()) {
+             printf("Timer interrupt: PID %d at %ld\r\n", current->pid, rawTime);
+             current = time_inter_handle(current);
          }
-        if (current->pc == current->max_pc) {
-        	 current->termcount = current->termcount + 1;
-        	 current->pc = 0;
-
+         if (current->pc >= current->max_pc) {
+             current->termcount = current->termcount + 1;
+             current->pc = 0;
          }
-         //printf("HERE\n");
-         if (current->termcount == current->terminate) {
-        	 current->state = dead;
-        	 q_enqueue(deadq, current);
-        	 current = scheduler(rdyq, current, current->state);
-        	 /*printf("Process terminated: PID %d at %s", pid, asctime (timeinfo));*/
+         if (current->termcount >= current->terminate) {
+             printf("Process terminated: PID %d at %ld\r\n", current->pid, rawTime);
+             pcb_set_termination(current, rawTime);
+             current = term_inter_handle(current);
          }
-         /*printf("%d\n", waiting->node_count);
-         if (io_interrupt(waiting)) {
-        	 if (waiting->node_count > 0) {
-        		 printf("I/O completion interrupt: PID %d is running, PID %d put in ready queue\n",
-        		             		current->pid, q_peek(waiting)->pid);
-        	 }
-             q_enqueue(rdyq, q_dequeue(waiting));*/
-         //}
-         /*int i;
+         if (io_1_inter()) {
+             printf("IO 1 Complete: PID %d at %ld\r\n", q_peek(iowait1)->pid, rawTime);
+             current = io_inter_handle(current, ioready1);
+             //printf("%s\n", q_toString(rdyq));
+         }
+         if (io_2_inter()) {
+             printf("IO 2 Complete: PID %d at %ld\r\n", q_peek(iowait2)->pid, rawTime);
+             current = io_inter_handle(current, ioready2);
+             //printf("%s\n", q_toString(rdyq));
+         }
+         int i;
          for (i = 0; i < NUMTRAPS; i = i + 1) {
             if (current->IO_1_TRAPS[i] == pc) {
-                current = io_trap_handle(rdyq, waiting, current, 1);
-                printf("");
+                printf("IO 1 Trap: PID %d at %ld\r\n", current->pid, rawTime);
+                current = io_trap_handle(current, 1);
                 break;
             }
             if (current->IO_2_TRAPS[i] == pc) {
-                current = io_trap_handle(rdyq, waiting, current, 2);
+                printf("IO 2 Trap: PID %d at %ld\r\n", current->pid, rawTime);
+                current = io_trap_handle(current, 2);
                 break;
             }
-         }*/
-         run = run - 1;
+         }
+         //run = run - 1;
+         if (deadq->node_count == 10) break;
      }
-     return 1;
- }
-int main() {
-
-	 cpu_loop();
-	 return 0;
+     
+     printf("Ready: %s\r\n", q_toString(rdyq));
+     printf("IO1: %s\r\n", q_toString(iowait1));
+     printf("IO2: %s\r\n", q_toString(iowait2));
+     printf("Dead: %s\r\n", q_toString(deadq));
+     return 0;
 }
+
+int main (void) {
+    iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
+    iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
+    enq = que_constructor();
+    rdyq = que_constructor();
+    iowait1 = que_constructor();
+    iowait2 = que_constructor();
+    deadq = que_constructor();
+    return cpu_loop();
+}
+
+
+
