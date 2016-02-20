@@ -132,7 +132,7 @@ int pcb_set_io1 (pcb_ptr this, int * io_1_traps) {
     return 0;
 }
 int * pcb_get_io1 (pcb_ptr this) {
-    int[NUMTRAPS] traps;
+    int * traps = (int*) malloc(sizeof(int)*NUMTRAPS);
     int i = 0;
     for (; i < NUMTRAPS; i++) {
         traps[i] = this->IO_1_TRAPS[i];
@@ -148,7 +148,7 @@ int pcb_set_io2 (pcb_ptr this, int * io_2_traps) {
     return 0;
 }
 int * pcb_get_io2 (pcb_ptr this) {
-    int[NUMTRAPS] traps;
+    int * traps = (int*) malloc(sizeof(int)*NUMTRAPS);
     int i = 0;
     for (; i < NUMTRAPS; i++) {
         traps[i] = this->IO_2_TRAPS[i];

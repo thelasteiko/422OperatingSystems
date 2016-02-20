@@ -7,17 +7,26 @@
 #include "pcb.h"
 #include "que.h"
 #include "cpu.h"
+#include "sch.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 
 int cntx = 0;
 int cntx2 = 0;
+int pseudostack = 0;
 
 int random1(int min, int max) {
+    /*Creates a random number, yay.*/
+    time_t seed;
+    seed = time(NULL);
+    srand((unsigned int)seed);
     return (rand() % (max-min)) + min;
 }
 
 sch_ptr sch_constructor () {
+    /*Creates a schedule object that keeps track of
+     * and manages processes. */
     sch_ptr sched = (sch_ptr) malloc(sizeof(sch));
     sched->enq = que_constructor();
     sched->rdyq = que_constructor();
@@ -25,39 +34,6 @@ sch_ptr sch_constructor () {
     sched->iowait2 = que_constructor();
     sched->deadq = que_constructor();
     return sched;
-}
-
-int time_inter (sch_ptr this) {
-    if (this->timer == 0) {
-        this->timer = MAXTIME;
-        return 1;
-    }
-    else this->timer = this->timer - 1;
-    return 0;
-}
-
-int io_1_inter (sch_ptr this) {
-    /*Track if there is a interrupt for
-     * IO device 1.*/
-    if (this->iotime1 == 0) {
-        this->iotime1 = random1(MAXTIME * 2, MAXTIME * 3);
-        return 1;
-    }
-    else if (this->iowait1->node_count > 0)
-        this->iotime1 = iotime1 - 1;
-    return 0;
-}
-
-int io_2_inter (sch_ptr this) {
-    /*Track if there is a interrupt for
-     * IO device 2.*/
-    if (this->iotime2 == 0) {
-        this->iotime2 = random1(MAXTIME * 2, MAXTIME * 3);
-        return 1;
-    }
-    else if (this->iowait2->node_count > 0)
-        this->iotime2 = iotime2 - 1;
-    return 0;
 }
 
 pcb_ptr make_pcb(int pid) {
@@ -97,9 +73,18 @@ pcb_ptr make_pcb(int pid) {
     return node;
 }
 
-int sch_init_pcb(sch_ptr this, int pid) {
+pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
+    *pid = sch_enqueue(this, *pid);
+    sch_ready(this);
+    pcb_ptr current = q_dequeue(this->rdyq);
+    pseudostack = current->pc;
+    that->pc = pseudostack;
+    return current;
+}
+
+int sch_enqueue(sch_ptr this, int pid) {
     /*Initialize some PCBs to be run.*/
-    int i = (rand()) % 6;
+    int i = random1(1, 5);
     while(i) {
         pcb_ptr node = make_pcb(pid);
         q_enqueue(this->enq, node);
@@ -108,19 +93,19 @@ int sch_init_pcb(sch_ptr this, int pid) {
     }
     return pid;
 }
-
 int sch_ready (sch_ptr this) {
     /*Move all items from the enqueueing queue to the ready queue.*/
-	printf("\r\nEnqueing %d pcb's.\r\n", enq->node_count);
-	while(enq->node_count) {
-        pcb_ptr node = q_dequeue(enq);
+	printf("\r\nEnqueing %d pcb's.\r\n", this->enq->node_count);
+	while(this->enq->node_count) {
+        pcb_ptr node = q_dequeue(this->enq);
         printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
-        q_enqueue(rdyq, node);
+        q_enqueue(this->rdyq, node);
     }
     return 0;
 }
 
 pcb_ptr idle_process () {
+    /*An idle process to keep the CPU busy.*/
     pcb_ptr idle = pcb_constructor();
     time_t cre;
     time(&cre);
@@ -171,53 +156,62 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
 pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     /*Determine what to do based on state.*/
     pcb_ptr next = NULL;
-    that->pseudostack = that->pc;
+    pseudostack = that->pc;
     enum state_type inter = current->state;
     switch(inter) {
         case interrupted:
         current->state = ready;
-        next = dispatcher(rdyq, rdyq, current);
+        next = dispatcher(this->rdyq, this->rdyq, current);
         next->state = running;
-        that->pseudostack = next->pc;
+        //pseudostack = next->pc;
         break;
         
         case wait1:
-        next = dispatcher(iowait1, rdyq, current);
+        next = dispatcher(this->iowait1, this->rdyq, current);
         next->state = running;
-        that->pseudostack = next->pc;
+        //pseudostack = next->pc;
         break;
         
         case wait2:
-        next = dispatcher(iowait2, rdyq, current);
+        next = dispatcher(this->iowait2, this->rdyq, current);
         next->state = running;
-        that->pseudostack = next->pc;
+        //pseudostack = next->pc;
         break;
         
         case ioready1:
-        next = q_dequeue(iowait1);
+        next = q_dequeue(this->iowait1);
         next->state = ready;
-        q_enqueue(rdyq, next);
+        q_enqueue(this->rdyq, next);
         current->state = running;
         next = current;
         break;
         
         case ioready2:
-        next = q_dequeue(iowait2);
+        next = q_dequeue(this->iowait2);
         next->state = ready;
-        q_enqueue(rdyq, next);
+        q_enqueue(this->rdyq, next);
         current->state = running;
         next = current;
         break;
         
         case dead:
         //put in deadq and return next rdyq pcb
-        next = dispatcher(deadq, rdyq, current);
+        next = dispatcher(this->deadq, this->rdyq, current);
         next->state = running;
-        that->pseudostack = next->pc;
+        //pseudostack = next->pc;
         break;
     }
-    that->pc = that->pseudostack;
+    that->pc = pseudostack;
     return next;
 }
 
-#endif
+int sch_destructor(sch_ptr this) {
+    /*Deallocates a schedule object.*/
+    q_destructor(this->enq);
+    q_destructor(this->rdyq);
+    q_destructor(this->iowait1);
+    q_destructor(this->iowait2);
+    q_destructor(this->deadq);
+    free(this);
+    return 0;
+}

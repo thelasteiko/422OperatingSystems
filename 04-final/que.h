@@ -37,7 +37,7 @@ pcb_ptr q_dequeue(que_ptr this);
 // peek at the first item in the que
 pcb_ptr q_peek(que_ptr this);
 // Deallocates the memory dedicated to the que.
-int que_destructor(que_ptr this);
+int q_destructor(que_ptr this);
 // The information for the pcb's
 char * q_toString(que_ptr this);
 #endif

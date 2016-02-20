@@ -15,52 +15,75 @@
 #include <string.h>
 
 
-pque_ptr pque_constructor() {
+pque_ptr pq_constructor() {
+    /*Create a new priority queue.*/
 	pque_ptr q = (pque_ptr)malloc(sizeof(pque));
 	int i;
-	for (i = 0; i < 16; i++) {
-	q->priorityQue[i] = que_constructor();
+	for (i = 0; i < MAXPRI+1; i++) {
+        q->priorityQue[i] = que_constructor();
 	}
+    q->node_count = 0;
 	return q;
 }
 
-ppush(pcb_ptr new_node, pque_ptr this) {
+int pq_enqueue(pque_ptr this, pcb_ptr new_node) {
+    /*Adds a PCB to the appropriate priority queue.*/
 	int index = pcb_get_priority(new_node);
 	que_ptr add_Here = this->priorityQue[index];
-	q_add(add_Here, new_node);
-	int p = pcb_get_priority(new_node);
-	//printf("The PCB has been pushed with priority %d", p);
+	q_enqueue(add_Here, new_node);
+    this->node_count = this->node_count + 1;
+    return 0;
 }
 
-pcb_ptr ppop(pque_ptr this) {
+pcb_ptr pq_dequeue(pque_ptr this) {
+    /*Dequeues and returns a PCB pointer.*/
 	int index = 0;
 	while (this->priorityQue[index]->node_count == 0) {
 		index = index + 1;
 	}
-	pcb_ptr removed = q_remove((que_ptr) this->priorityQue[index]);
-	enum state_type state = running;
-	pcb_set_state(removed, state);
+	pcb_ptr removed = q_dequeue((que_ptr) this->priorityQue[index]);
+    this->node_count = this->node_count - 1;
 	return removed;
 }
 
-pcb_ptr ppeek(pque_ptr this) {
+pcb_ptr pq_peek(pque_ptr this) {
+    /*Returns what will be removed upon dequeueing.*/
 	int index = 0;
 	while (this->priorityQue[index]->node_count == 0) {
-		//printf(q_toString(q_peek(this->priorityQue[index])));
 		index = index + 1;
 	}
 	return q_peek((que_ptr) this->priorityQue[index]);
 }
 
-char * toString2(pque_ptr this) {
-	char * string = "";
-	char * string2 = "";
-	//char * string3 = "hello";
-	while (ppeek(this) != NULL) {
-		string = pcb_toString(ppeek(this));
-		strcat(string2, string);
-	}
-	//printf(ppeek(this));
+char * pq_toString(pque_ptr this) {
+/*Prints the priority queue by calling individual queueu toStrings.*/
+    int i, size = 0, max = 0;
+    for (i = 0; i < MAXPRI+1; i = i + 1) {
+        if (this->priorityQue[i]->node_count > 0) {
+            size = size + ((this->priorityQue[i]->node_count)*64)+10;
+            if (this->priorityQue[i]->node_count > max)
+                max = this->priorityQue[i]->node_count;
+        }
+    }
+    max = ((max*4)+10+64);
+    size = max * size;
+	char * str = (char *) malloc(sizeof(char) * size);
+    char * cur = (char *) malloc(sizeof(char) * max);
+    for (i = 0; i < MAXPRI+1; i = i + 1) {
+        if (this->priorityQue[i]->node_count > 0) {
+            sprintf(cur,"%d%s\n", i, q_toString(this->priorityQue[i]));
+            strcat(str, cur);
+        }
+    }
+	return str;
+}
 
-	return "";
+int pq_destructor (pque_ptr this) {
+    /*Deallocates the memory used for a priority queue.*/
+    int i;
+    for (i = 0; i < MAXPRI+1; i = i + 1) {
+        q_destructor(this->priorityQue[i]);
+    }
+    free(this);
+    return 0;
 }

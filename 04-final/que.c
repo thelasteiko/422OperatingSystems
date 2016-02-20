@@ -61,7 +61,7 @@ pcb_ptr q_peek(que_ptr this) {
 	return (pcb_ptr) this -> first_node -> my_pcb;
 }
 /*Deallocates the memory dedicated to the que.*/
-int que_destructor(que_ptr this) {
+int q_destructor(que_ptr this) {
 	free(this);
     return 0;
 }
