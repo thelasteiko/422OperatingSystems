@@ -20,12 +20,21 @@
 mutex_ptr mutex_constructor() {
 	mutex_ptr mut = (mutex_ptr) malloc (sizeof(mutex));
 	mut->mutex_state = 0;
-	//The thing we're using to simulate threads
 	return mut;
 }
 
-int mutex_lock (mutex_ptr this) {
+int mutex_lock (mutex_ptr this, pcb_ptr thispcb) {
 	int result = 0;
+	if(this->mutex_state == 0) {
+		if (thispcb->state == blocked) {
+			thispcb->state = running;//whatever it used to be
+		}
+		result = 1;
+		this->using_pcb = thispcb;
+		return result;
+	} else {
+		pcb_set_state(thispcb, blocked);
+	}
 	return result;
 }
 
@@ -33,8 +42,12 @@ int mutex_trylock (mutex_ptr this) {
 	return this->mutex_state;
 }
 
-int mutex_unlock (mutex_ptr this) {
+int mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
 	int result = 0;
+	if (this->using_pcb == thispcb && this->mutex_state == 1) {
+		this->mutex_state = 0;
+		this->using_pcb = NULL;
+	}
 	return result;
 }
 
@@ -42,7 +55,6 @@ cond_ptr cond_constructor() {
 	cond_ptr con = (cond_ptr) malloc (sizeof(cond));
 	con->associated_mutex = que_constructor();
 	con->waiting_threads = que_constructor();
-//	return cond;  cond wasn't decleared 
 	return cond;
 }
 
