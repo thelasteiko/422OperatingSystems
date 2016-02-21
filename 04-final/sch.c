@@ -16,6 +16,7 @@ int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
 int iop = 0;
+char * proConStart = "ProducerConsumerPair:";
 int numOfProCon; // the number of different Producer/Consumers that there are currently.
 int proConVar[10]; //A global variable for each Producer/Consumer pair. 
 				   //Producer / 2 = (Consumer - 1) / 2 = array number.
@@ -75,6 +76,23 @@ pcb_ptr make_pcb(int pid, long rawTime) {
     }
     pcb_initialize(node, pid, pri, st, pc, mpc,
         0, t2, io1, io2);
+	if (pri == 1) {
+		if (numOfProCon < 20) {
+			char * name;
+			char * place;
+			strcpy(name, proConStart);
+			if (numOfProCon % 2 == 0) {
+				sprintf(place, "%d", numOfProCon + 1);
+			}
+			else {
+				sprintf(place, "%d", numOfProCon);
+			}
+			strcat(name, place);
+			pcb_set_name(node, name); // set pcb name
+			pcb_set_pro_con(node, numOfProCon); // set pcb proCon Number
+			numOfProCon++;
+		}
+	}
     return node;
 }
 
