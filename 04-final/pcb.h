@@ -38,6 +38,8 @@ typedef struct pcb_type {
     int origpri; //the original priority
     int pridown; //time until demotion
     int pritimeout; //the max time it can wait
+	char * name; //used to tell the pairs for the prducer/consumer
+	int producer; // used to tell which one is the producer and which one is the consumer
 } pcb;
 typedef pcb * pcb_ptr;
 /*Creates a process control block.*/
@@ -57,6 +59,10 @@ int pcb_set_priority (pcb_ptr this, int priority);
 int pcb_get_priority (pcb_ptr this);
 /*Set the state of the current process.*/
 int pcb_set_state (pcb_ptr this, enum state_type state);
+/*Set the name of the pcb*/
+int pcb_set_name(pcb_ptr this, char * myName);
+/*Set if the pcb is a prdocer:(# % 2 = 0) or consumer: (# % 2 = 1)*/
+int pcb_set_pro_con(pcb_ptr this, int proCon);
 /*Get the state of the process to run.*/
 enum state_type pcb_get_state  (pcb_ptr this);
 /*

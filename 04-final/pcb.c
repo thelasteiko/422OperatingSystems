@@ -34,7 +34,8 @@ pcb_ptr pcb_constructor() {
     p->termination = 0;
     p->terminate = 0;
     p->termcount = 0;
-    p->pritime = 0;
+    p->pritimeout = 0;
+    p->pridown = 0;
     int reg[NUMTRAPS];
     int i;
     for(i = 0; i < NUMTRAPS; i = i+1) {
@@ -49,7 +50,6 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
     long creation, int terminate,
     int * IO_1_TRAPS, int * IO_2_TRAPS) {
         this->pid = pid;
-        this->priority = priority;
         this->origpri = priority;
         this->state = state;
         this->pc = pc;
@@ -58,6 +58,9 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->terminate = terminate;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
+		this->name = null;
+		this->producer = -1;
+        pcb_set_priority(this, priority);
         return 0;
 }
 int pcb_set_pid (pcb_ptr this, int pid) {
@@ -81,6 +84,14 @@ int pcb_get_priority (pcb_ptr this) {
 int pcb_set_state (pcb_ptr this, enum state_type state) {
     this->state = state;
     return 0;
+}
+int pcb_set_name(pcb_ptr this, char * myName) {
+	this->name = myName;
+	return 0;
+}
+int pcb_set_pro_con(pcb_ptr this, int proCon) {
+	this->producer = proCon;
+	return 0;
 }
 enum state_type pcb_get_state (pcb_ptr this) {
     if (this->state < ready || this->state > dead)
