@@ -53,18 +53,14 @@ pcb_ptr io_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current, enum state
 
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     printf("Starting...\r\n");
-    int run = 100;
+    int run = 1000;
     unsigned int pid = random1(0, 200);
-    unsigned int maxpid = pid + 300;
-    long rawTime;
-    struct timespec timeinfo;
-    clock_gettime(CLOCK_REALTIME, &timeinfo);
-    rawTime = timeinfo.tv_nsec;
+    unsigned int maxpid = pid + 30;
+    long rawTime = 0;
     pcb_ptr current = sch_init(this, that, &pid);
     printf("Process created: PID %d at %ld\r\n", pid, rawTime);
     while (run) {
-       clock_gettime(CLOCK_REALTIME, &timeinfo);
-       rawTime = timeinfo.tv_nsec;
+        rawTime = rawTime + 1;
         if(pid < maxpid) {
            pid = sch_enqueue(this,pid);
            sch_ready(this);
@@ -107,13 +103,8 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
             }
         }
         run = run - 1;
-        //if (deadq->node_count == 10) break;
     }
-     
-    //printf("Ready: %s\r\n", q_toString(rdyq));
-    //printf("IO1: %s\r\n", q_toString(iowait1));
-    //printf("IO2: %s\r\n", q_toString(iowait2));
-    //printf("Dead: %s\r\n", q_toString(deadq));
+
     return 0;
 }
 

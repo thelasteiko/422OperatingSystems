@@ -11,6 +11,8 @@
 #include "que.h"
 #include "cpu.h"
 
+#define MAXIOP 50
+
 typedef struct sch_type {
     que_ptr enq;
     que_ptr rdyq;

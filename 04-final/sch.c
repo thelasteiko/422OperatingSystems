@@ -15,6 +15,7 @@
 int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
+int iop = 0;
 
 int random1(int min, int max) {
     /*Creates a random number, yay.*/
@@ -40,10 +41,15 @@ pcb_ptr make_pcb(int pid) {
     /*Create a randomized pcb with the pid.
     Need to include priority flag and mutex array.*/
     pcb_ptr node = pcb_constructor();
-    int pri = random1(0, MAXPRI);
+    int prob = random1(1, 100);
+    int pri = -1;
+    if (prob <= 5) pri = 0;
+    else if (prob <= 85) pri = 1;
+    else if (prob <= 95) pri = 2;
+    else pri = 3;
     int st = ready;
     unsigned int pc = 0;//(unsigned int) random1(MAXTIME, MAXTIME * 5);
-    unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 8);
+    unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 4);
     //pc = 0;
     time_t cre;
     time(&cre);
