@@ -55,6 +55,8 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->terminate = terminate;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
+		this->name = null;
+		this->producer = -1;
         return 0;
 }
 int pcb_set_pid (pcb_ptr this, int pid) {
@@ -76,6 +78,14 @@ int pcb_get_priority (pcb_ptr this) {
 int pcb_set_state (pcb_ptr this, enum state_type state) {
     this->state = state;
     return 0;
+}
+int pcb_set_name(pcb_ptr this, char * myName) {
+	this->name = myName;
+	return 0;
+}
+int pcb_set_pro_con(pcb_ptr this, int proCon) {
+	this->producer = proCon;
+	return 0;
 }
 enum state_type pcb_get_state (pcb_ptr this) {
     if (this->state < ready || this->state > dead)

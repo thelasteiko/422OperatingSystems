@@ -16,6 +16,9 @@ int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
 int iop = 0;
+int numOfProCon; // the number of different Producer/Consumers that there are currently.
+int proConVar[10]; //A global variable for each Producer/Consumer pair. 
+				   //Producer / 2 = (Consumer - 1) / 2 = array number.
 
 int random1(int min, int max) {
     /*Creates a random number, yay.*/
