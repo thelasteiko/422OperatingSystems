@@ -17,7 +17,7 @@
 #define MAXPRI 3
 /*Possible states a process can be in. Default is dead.*/
 enum state_type {
-  ready, running, interrupted, wait1, wait2, ioready1, ioready2, dead
+  ready, running, interrupted, wait1, wait2, ioready1, ioready2, dead, blocked
 };
 /*
  * Process control block data type. Holds everything
