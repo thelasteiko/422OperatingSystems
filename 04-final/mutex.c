@@ -42,6 +42,7 @@ cond_ptr cond_constructor() {
 	cond_ptr con = (cond_ptr) malloc (sizeof(cond));
 	con->associated_mutex = que_constructor();
 	con->waiting_threads = que_constructor();
+//	return cond;  cond wasn't decleared 
 	return cond;
 }
 
