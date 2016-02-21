@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAXTIME 300
+
 /*Creates a que.*/
 que_ptr que_constructor() {
 	que_ptr q = (que_ptr)malloc(sizeof(que));
@@ -59,6 +61,44 @@ pcb_ptr q_dequeue(que_ptr this) {
 /*peek at the first item in the que*/
 pcb_ptr q_peek(que_ptr this) {
 	return (pcb_ptr) this -> first_node -> my_pcb;
+}
+
+pcb_ptr q_updatepri (que_ptr this) {
+    node_type prev = (node_type) this->first_node;
+    node_type p = null;
+    if (prev->next) {
+        node_type p = (node_type) prev->next_node;
+    }
+    while (p && prev) {
+        pcb_ptr current = p->my_pcb;
+        int k = current->pritimeout;
+        int t = current->pridown;
+        if (current->origpri != current->priority
+            && k <= current->origpri * MAXTIME) {
+            t = t - 1;
+            if (t <= 0) {
+                pcb_set_priority(current, current->origpri);
+            }
+           prev->next_node = p->next_node;
+           this->node_count = this->node_count - 1;
+           free (p);
+           return current;
+        }
+        k = k - 1;
+        if (k <= 0) {
+           pcb_set_priority(current, current->priority + 1);
+           //remove from list
+           prev->next_node = p->next_node;
+           this->node_count = this->node_count - 1;
+           free (p);
+           return current;
+        }
+        current->pritimeout = k;
+        current->pridown = t;
+        prev = p;
+        p = p->next_node;
+    }
+    return null;
 }
 /*Deallocates the memory dedicated to the que.*/
 int q_destructor(que_ptr this) {

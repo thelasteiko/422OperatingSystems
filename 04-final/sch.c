@@ -37,7 +37,7 @@ sch_ptr sch_constructor () {
     return sched;
 }
 
-pcb_ptr make_pcb(int pid) {
+pcb_ptr make_pcb(int pid, long rawTime) {
     /*Create a randomized pcb with the pid.
     Need to include priority flag and mutex array.*/
     pcb_ptr node = pcb_constructor();
@@ -48,11 +48,8 @@ pcb_ptr make_pcb(int pid) {
     else if (prob <= 95) pri = 2;
     else pri = 3;
     int st = ready;
-    unsigned int pc = 0;//(unsigned int) random1(MAXTIME, MAXTIME * 5);
+    unsigned int pc = 0;
     unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 4);
-    //pc = 0;
-    time_t cre;
-    time(&cre);
     int t2 = random1(2, 15);
     unsigned int last, i, next, k;
     int io1[NUMTRAPS];
@@ -60,7 +57,6 @@ pcb_ptr make_pcb(int pid) {
     last = pc;
     if (mpc - last < 1000) next = 50;
     else next = 100;
-
     for (i = 0; i < NUMTRAPS; i = i + 1) {
     	if (last > next) {
     		next = next + last;
@@ -75,12 +71,12 @@ pcb_ptr make_pcb(int pid) {
         else next = next+100;
     }
     pcb_initialize(node, pid, pri, st, pc, mpc,
-        cre, t2, io1, io2);
+        0, t2, io1, io2);
     return node;
 }
 
 pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
-    *pid = sch_enqueue(this, *pid);
+    *pid = sch_enqueue(this, that, *pid);
     sch_ready(this);
     pcb_ptr current = q_dequeue(this->rdyq);
     pseudostack = current->pc;
@@ -88,11 +84,11 @@ pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
     return current;
 }
 
-int sch_enqueue(sch_ptr this, int pid) {
+int sch_enqueue(sch_ptr this, cpu_ptr that, int pid) {
     /*Initialize some PCBs to be run.*/
     int i = random1(1, 5);
     while(i) {
-        pcb_ptr node = make_pcb(pid);
+        pcb_ptr node = make_pcb(pid, that->totaltime);
         q_enqueue(this->enq, node);
         pid = pid + 1;
         i = i - 1;
@@ -113,8 +109,6 @@ int sch_ready (sch_ptr this) {
 pcb_ptr idle_process () {
     /*An idle process to keep the CPU busy.*/
     pcb_ptr idle = pcb_constructor();
-    time_t cre;
-    time(&cre);
     int io1[NUMTRAPS];
     int io2[NUMTRAPS];
     int i;
@@ -123,7 +117,7 @@ pcb_ptr idle_process () {
         io2[i] = -1;
     }
     pcb_initialize(idle,-1,15, running, 0, 10,
-        cre, 1, io1, io2);
+        0, 1, io1, io2);
     return idle;
 }
 
@@ -209,6 +203,22 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     }
     that->pc = pseudostack;
     return next;
+}
+
+int sch_updatepri (sch_ptr this) {
+    /*Update the priority levels of processes
+     *to prevent starvation.*/
+    return pq_updatepri(this->rdyq);
+}
+
+int sch_dumptrash(sch_ptr this) {
+    /*Delete all the things in deadq.*/
+    pcb_ptr current = q_dequeue(this->deadq);
+    while (current) {
+        pcb_destructor(current);
+        current = q_dequeue(this->deadq);
+    }
+    return 0;
 }
 
 int sch_destructor(sch_ptr this) {

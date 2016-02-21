@@ -6,6 +6,7 @@ cpu_ptr cpu_constructor () {
     mycpu->pseudostack = 0;
     mycpu->pc = 0;
     mycpu->timer = MAXTIME;
+    mycpu->totaltime = 0;
     mycpu->iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
     mycpu->iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
 }

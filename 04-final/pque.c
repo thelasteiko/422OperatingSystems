@@ -55,6 +55,16 @@ pcb_ptr pq_peek(pque_ptr this) {
 	return q_peek((que_ptr) this->priorityQue[index]);
 }
 
+int pq_updatepri(pque_ptr this) {
+    int i, j;
+    for (i = 1; i < MAXPRI; i = i + 1) {
+        pcb_ptr p = q_updatepri(this->priorityQue[i]);
+        if (p) {
+            pq_enqueue(this, p);
+        }
+    }
+}
+
 char * pq_toString(pque_ptr this) {
 /*Prints the priority queue by calling individual queueu toStrings.*/
     int i, size = 0, max = 0;

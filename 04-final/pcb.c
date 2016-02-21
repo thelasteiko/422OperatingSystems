@@ -15,6 +15,8 @@
 #include <string.h>
 #include <time.h>
 
+#define MAXTIME 300
+
 int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
     return error_code;
@@ -24,15 +26,15 @@ pcb_ptr pcb_constructor() {
     if (!p) error_handle("PCB could not be allocated.", 3, 1);
     p->pid = -1;
     p->priority = MAXPRI;
+    p->origpri = MAXPRI;
     p->state = dead;
     p->pc = 0;
     p->max_pc = 0;
-    struct timespec timeinfo;
-    clock_gettime(CLOCK_REALTIME, &timeinfo);
-    p->creation = timeinfo.tv_nsec;
-    p->termination = timeinfo.tv_nsec;
+    p->creation = 0;
+    p->termination = 0;
     p->terminate = 0;
     p->termcount = 0;
+    p->pritime = 0;
     int reg[NUMTRAPS];
     int i;
     for(i = 0; i < NUMTRAPS; i = i+1) {
@@ -48,6 +50,7 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
     int * IO_1_TRAPS, int * IO_2_TRAPS) {
         this->pid = pid;
         this->priority = priority;
+        this->origpri = priority;
         this->state = state;
         this->pc = pc;
         this->max_pc = max_pc;
@@ -68,6 +71,8 @@ int pcb_set_priority (pcb_ptr this, int priority) {
     if (priority > MAXPRI)
         return error_handle("Priority cannot be over the max priority.", 2, 0);
     this->priority = priority;
+    this->pritimeout = this->origpri * MAXTIME;
+    this->pridown = this->priority * MAXTIME;
     return 0;
 }
 int pcb_get_priority (pcb_ptr this) {

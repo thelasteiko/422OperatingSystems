@@ -56,18 +56,18 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
     int run = 1000;
     unsigned int pid = random1(0, 200);
     unsigned int maxpid = pid + 30;
-    long rawTime = 0;
     pcb_ptr current = sch_init(this, that, &pid);
-    printf("Process created: PID %d at %ld\r\n", pid, rawTime);
+    printf("Process created: PID %d at %ld\r\n", pid, that->totaltime);
     while (run) {
-        rawTime = rawTime + 1;
+        that->totaltime = that->totaltime + 1;
+        sch_updatepri(this);
         if(pid < maxpid) {
-           pid = sch_enqueue(this,pid);
+           pid = sch_enqueue(this, that, pid);
            sch_ready(this);
         }
         that->pc = that->pc + 1;
         if(time_inter(that)) {
-            printf("Timer interrupt: PID %d at %ld\r\n", current->pid, rawTime);
+            printf("Timer interrupt: PID %d at %ld\r\n", current->pid, that->totaltime);
             current = time_inter_handle(this, that, current);
         }
         if (current->pc >= current->max_pc) {
@@ -75,24 +75,24 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
             current->pc = 0;
         }
         if (current->termcount >= current->terminate) {
-            printf("Process terminated: PID %d at %ld\r\n", current->pid, rawTime);
-            pcb_set_termination(current, rawTime);
+            printf("Process terminated: PID %d at %ld\r\n", current->pid, that->totaltime);
+            pcb_set_termination(current, that->totaltime);
             current = term_inter_handle(this, that, current);
         }
         if (io_1_inter(that, this->iowait1->node_count)) {
-            printf("IO 1 Complete: PID %d at %ld\r\n", q_peek(this->iowait1)->pid, rawTime);
+            printf("IO 1 Complete: PID %d at %ld\r\n", q_peek(this->iowait1)->pid, that->totaltime);
             current = io_inter_handle(this, that, current, ioready1);
             //printf("%s\n", q_toString(rdyq));
         }
         if (io_2_inter(that, this->iowait2->node_count)) {
-            printf("IO 2 Complete: PID %d at %ld\r\n", q_peek(this->iowait2)->pid, rawTime);
+            printf("IO 2 Complete: PID %d at %ld\r\n", q_peek(this->iowait2)->pid, that->totaltime);
             current = io_inter_handle(this, that, current, ioready2);
             //printf("%s\n", q_toString(rdyq));
         }
         int i;
         for (i = 0; i < NUMTRAPS; i = i + 1) {
             if (current->IO_1_TRAPS[i] == that->pc) {
-                printf("IO 1 Trap: PID %d at %ld\r\n", current->pid, rawTime);
+                printf("IO 1 Trap: PID %d at %ld\r\n", current->pid, that->totaltime);
                 current = io_trap_handle(this, that, current, wait1);
                 break;
             }
@@ -101,6 +101,11 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
                 current = io_trap_handle(this, that, current, wait2);
                 break;
             }
+        }
+        if(this->deadq->node_count > 25) {
+            printf("Dumping trash at %ld\r\n", that->totaltime);
+            printf("Dead %s", q_toString(this->deadq));
+            dumptrash(this);
         }
         run = run - 1;
     }

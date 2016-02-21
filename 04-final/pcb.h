@@ -17,7 +17,7 @@
 #define MAXPRI 3
 /*Possible states a process can be in. Default is dead.*/
 enum state_type {
-  ready, running, interrupted, wait1, wait2, ioready1, ioready2, dead, blocked
+  ready, running, interrupted, wait1, wait2, ioready1, ioready2, blocked, dead
 };
 /*
  * Process control block data type. Holds everything
@@ -35,6 +35,9 @@ typedef struct pcb_type {
     int termcount; //how many time max_pc is passed
     int IO_1_TRAPS[NUMTRAPS];
     int IO_2_TRAPS[NUMTRAPS];
+    int origpri; //the original priority
+    int pridown; //time until demotion
+    int pritimeout; //the max time it can wait
 } pcb;
 typedef pcb * pcb_ptr;
 /*Creates a process control block.*/

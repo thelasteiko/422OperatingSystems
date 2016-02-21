@@ -8,6 +8,7 @@ typedef struct cpu_type {
     unsigned int pseudostack;
     unsigned int pc;
     int timer;
+    int totaltime;
     int iotime1;
     int iotime2;
 } cpu;
