@@ -81,7 +81,7 @@ pcb_ptr make_pcb(int pid, long rawTime) {
 pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
     *pid = sch_enqueue(this, that, *pid);
     sch_ready(this);
-    pcb_ptr current = q_dequeue(this->rdyq);
+    pcb_ptr current = pq_dequeue(this->rdyq);
     pseudostack = current->pc;
     that->pc = pseudostack;
     return current;
@@ -104,7 +104,7 @@ int sch_ready (sch_ptr this) {
 	while(this->enq->node_count) {
         pcb_ptr node = q_dequeue(this->enq);
         printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
-        q_enqueue(this->rdyq, node);
+        pq_enqueue(this->rdyq, node);
     }
     return 0;
 }
@@ -161,22 +161,24 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pcb_ptr next = NULL;
     pseudostack = that->pc;
     enum state_type inter = current->state;
+    que_ptr from = pq_minpri(this->rdyq);
+    que_ptr to = this->rdyq->priorityQueue[current->priority];
     switch(inter) {
         case interrupted:
         current->state = ready;
-        next = dispatcher(this->rdyq, this->rdyq, current);
+        next = dispatcher(to, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;
         
         case wait1:
-        next = dispatcher(this->iowait1, this->rdyq, current);
+        next = dispatcher(this->iowait1, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;
         
         case wait2:
-        next = dispatcher(this->iowait2, this->rdyq, current);
+        next = dispatcher(this->iowait2, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;
@@ -184,7 +186,7 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         case ioready1:
         next = q_dequeue(this->iowait1);
         next->state = ready;
-        q_enqueue(this->rdyq, next);
+        pq_enqueue(this->rdyq, next);
         current->state = running;
         next = current;
         break;
@@ -192,14 +194,14 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         case ioready2:
         next = q_dequeue(this->iowait2);
         next->state = ready;
-        q_enqueue(this->rdyq, next);
+        pq_enqueue(this->rdyq, next);
         current->state = running;
         next = current;
         break;
         
         case dead:
         //put in deadq and return next rdyq pcb
-        next = dispatcher(this->deadq, this->rdyq, current);
+        next = dispatcher(this->deadq, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;

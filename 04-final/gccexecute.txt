@@ -1,3 +1,6 @@
 gcc -c pcb.c -o pcb.o
+gcc -c que.c -o que.o
+gcc -c pque.c -o pque.o
+gcc -c cpu.c -o cpu.o
 gcc -c sch.c -o sch.o
 gcc pcb.h pcb.o que.h que.o pque.h pque.o cpu.h cpu.o sch.h sch.o cpuloop.c -o cpuloop.exe

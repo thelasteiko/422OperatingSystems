@@ -56,13 +56,23 @@ pcb_ptr pq_peek(pque_ptr this) {
 }
 
 int pq_updatepri(pque_ptr this) {
-    int i, j;
+    int i;
     for (i = 1; i < MAXPRI; i = i + 1) {
         pcb_ptr p = q_updatepri(this->priorityQue[i]);
         if (p) {
             pq_enqueue(this, p);
         }
     }
+}
+
+que_ptr pq_minpri(pque_ptr this) {
+    int i;
+    for (i = 0; i < MAXPRI; i = i + 1) {
+        if (this->priorityQue[i]->node_count > 0) {
+            return this->priorityQue[i];
+        }
+    }
+    return NULL;
 }
 
 char * pq_toString(pque_ptr this) {
