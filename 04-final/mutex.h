@@ -18,13 +18,14 @@ typedef struct mutex_type {
 	int mutex_state;  /* 0: unlocked / Available for use
 	 	 	 	 	 	 1: locked / Currently in use
 	 	 	 	 	  */
-
-	//Thread/Something that currently holds the mutex
-
+	int mutex_name;
+	pcb_ptr using_pcb;
+	que_ptr waiting_pcbs;
+	que_ptr done_que;
 } mutex;
 typedef mutex * mutex_ptr;
 
-mutex_ptr mutex_constructor();
+mutex_ptr mutex_constructor(int name);
 
 /* Locks the given mutex. If the mutex is currently unlocked, it becomes
  * locked by the calling thread, and mutex_lock returns
@@ -32,7 +33,7 @@ mutex_ptr mutex_constructor();
  * suspends the calling thread (puts it in the blocked state) until the mutex is unlocked.
  * mutex_lock will return a 1 if the lock
  */
-int mutex_lock (mutex_ptr this);
+int mutex_lock (mutex_ptr this, pcb_ptr thispcb);
 
 /*
  * Acts identically to mutex_lock, except that it does not block the calling thread if the
@@ -46,11 +47,12 @@ int mutex_trylock (mutex_ptr this);
  * Unlocks the given mutex. The mutex is assumed to be locked and owned by the calling thread when mutex_unlock is called.
  * RETURN INFO HERE
  */
-int mutex_unlock (mutex_ptr this);
+int mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
 
 typedef struct cond_type {
 	que_ptr waiting_threads;
 	que_ptr associated_mutex;
+	int condition;
 } cond;
 typedef cond * cond_ptr;
 
