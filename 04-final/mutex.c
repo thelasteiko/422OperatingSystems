@@ -47,11 +47,19 @@ int mutex_trylock (mutex_ptr this) {
 //remove cuurent holding pcb from using_pcb and add it to the done_que.
 //
 int mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
+	printf("im here1\n");
 	int result = 0;
 	if (this->using_pcb == thispcb && this->mutex_state == 1) {
-		this->mutex_state = 0;
+		printf("im here2\n");
+		//this->mutex_state = 0;
 		q_enqueue(this->done_que, thispcb);
-		this->using_pcb = NULL;
+
+		if (this->waiting_pcbs->node_count > 0) {
+			this->using_pcb = q_dequeue(this->waiting_pcbs);
+		} else {
+			this->using_pcb = NULL;
+			this->mutex_state = 0;
+		}
 		//if there is noting in the waiting que then using_pcb is null if there is something
 		//then using_pcb ='s the next item in the waiting que.
 	}
@@ -100,19 +108,28 @@ int main () {
 			    t1, t2);
 
 	mutex_ptr mut = mutex_constructor(10);
-	mutex_lock(mut, p2);
+	mutex_lock(mut, p1);
+
+
+
 
 
 	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
 	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
-
+	printf("1\n");
+	mutex_lock(mut, p2);
 	mutex_lock(mut, p3);
-	mutex_lock(mut, p1);
+	printf("2\n");
+	printf("Waiting PCB's: %s\n", q_toString(mut->waiting_pcbs));
+	printf("3\n");
 
 
-	printf(q_toString(mut->waiting_pcbs));
+	mutex_unlock(mut, p1);
+	printf("4\n");
 
-	printf("%d", )
+	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
+	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
+	printf("%s\n\n", q_toString(mut->waiting_pcbs));
 
 
 
