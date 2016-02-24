@@ -83,8 +83,36 @@ int cond_signal(cond_ptr this) {
 	int result = 0;
 	return result;
 }
+/**
+ * allows a thread (tracker, in our example)
+ *  to wait on a condition variable.
+ *  @ this
+ *  @this2 - lock variable
+ *
+ *  0 means waiting true
+ *  1 means waiting false
+ */
+int cond_wait2(cond_ptr this, mutex_ptr this2) {
+	if(this ->condition == 0){
+		q_enqueue(this->associated_mutex, this2->using_pcb);
+		return 0;
+	}else{
+		//Value is greater than 0, release the lock
+		q_enqueue(this->waiting_threads, this2->using_pcb);
+		return 1;
+	}
 
 
+	return -1;
+}
+/**
+ * call signals any thread that may be
+ * waiting on the named condition variable.
+ */
+int cond_signal2(cond_ptr this) {
+	return this ->condition;
+
+}
 //int main () {
 //	pcb_ptr p1 = pcb_constructor();
 //	pcb_ptr p2 = pcb_constructor();
