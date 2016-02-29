@@ -72,106 +72,89 @@ cond_ptr cond_constructor() {
 }
 
 int cond_wait(cond_ptr this, mutex_ptr this2) {
-	int result = 0;
-	//q_enqueue(this->associated_mutex, this2->using_pcb);
-	//q_enqueue(this->waiting_threads, this2->using_pcb);
-
-	return result;
+	if (this->condition == 0) {
+		mutex_unlock(this2, this2->using_pcb);
+		q_enqueue(this->associated_mutex, this2);
+		q_enqueue(this->waiting_threads, this2->using_pcb);
+	}
+	return 1;
 }
 
 int cond_signal(cond_ptr this) {
-	int result = 0;
+	if (this->condition == 1) {
+		int i;
+		for( i = 0; i < this->waiting_threads->node_count; i++) {
+			q_dequeue(this->waiting_threads);
+			q_dequeue(this->associated_mutex);
+			//put pcbs back to work
+		}
+
+	}
+	int result = 1;
 	return result;
 }
-/**
- * allows a thread (tracker, in our example)
- *  to wait on a condition variable.
- *  @ this
- *  @this2 - lock variable
- *
- *  0 means waiting true
- *  1 means waiting false
- */
-int cond_wait2(cond_ptr this, mutex_ptr this2) {
-	if(this ->condition == 0){
-		q_enqueue(this->associated_mutex, this2->using_pcb);
-		return 0;
-	}else{
-		//Value is greater than 0, release the lock
-		q_enqueue(this->waiting_threads, this2->using_pcb);
-		return 1;
-	}
 
 
-	return -1;
+int main1111 () {
+
+	pcb_ptr p1 = pcb_constructor();
+	pcb_ptr p2 = pcb_constructor();
+	pcb_ptr p3 = pcb_constructor();
+	int t1[] = {1,1,1,1};
+	int t2[] = {2,2,2,2};
+	pcb_initialize(p1, 1, 1,
+		    running, 1, 100,
+		    1, 1,
+		    t1, t2);
+	pcb_initialize(p2, 2, 1,
+			    running, 1, 100,
+			    1, 1,
+			    t1, t2);
+	pcb_initialize(p3, 3, 1,
+			    running, 1, 100,
+			    1, 1,
+			    t1, t2);
+
+	mutex_ptr mut = mutex_constructor(10);
+
+	printf("%d\n", mutex_trylock(mut));
+	mutex_lock(mut, p1);
+	printf("%d\n", mutex_trylock(mut));
+	mutex_lock(mut, p2);
+	mutex_lock(mut, p3);
+
+
+
+	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
+	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
+	printf("Waiting PCB's: %s\n", q_toString(mut->waiting_pcbs));
+	printf("Done que: %s\n\n", q_toString(mut->done_que));
+
+
+
+	mutex_unlock(mut, p1);
+
+
+	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
+	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
+	printf("%s\n", q_toString(mut->waiting_pcbs));
+	printf("Done que: %s\n\n", q_toString(mut->done_que));
+
+	mutex_unlock(mut, p2);
+
+
+	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
+	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
+	printf("%s\n", q_toString(mut->waiting_pcbs));
+	printf("Done que: %s\n\n", q_toString(mut->done_que));
+
+	mutex_unlock(mut, p3);
+
+	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
+	//printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
+	printf("%s\n", q_toString(mut->waiting_pcbs));
+	printf("Done que: %s\n\n", q_toString(mut->done_que));
+
+	return 0;
+
 }
-/**
- * call signals any thread that may be
- * waiting on the named condition variable.
- */
-int cond_signal2(cond_ptr this) {
-	return this ->condition;
-
-}
-//int main () {
-//	pcb_ptr p1 = pcb_constructor();
-//	pcb_ptr p2 = pcb_constructor();
-//	pcb_ptr p3 = pcb_constructor();
-//	int t1[] = {1,1,1,1};
-//	int t2[] = {2,2,2,2};
-//	pcb_initialize(p1, 1, 1,
-//		    running, 1, 100,
-//		    1, 1,
-//		    t1, t2);
-//	pcb_initialize(p2, 2, 1,
-//			    running, 1, 100,
-//			    1, 1,
-//			    t1, t2);
-//	pcb_initialize(p3, 3, 1,
-//			    running, 1, 100,
-//			    1, 1,
-//			    t1, t2);
-//
-//	mutex_ptr mut = mutex_constructor(10);
-//
-//	printf("%d\n", mutex_trylock(mut));
-//	mutex_lock(mut, p1);
-//	printf("%d\n", mutex_trylock(mut));
-//	mutex_lock(mut, p2);
-//	mutex_lock(mut, p3);
-//
-//
-//
-//	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
-//	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
-//	printf("Waiting PCB's: %s\n", q_toString(mut->waiting_pcbs));
-//	printf("Done que: %s\n\n", q_toString(mut->done_que));
-//
-//
-//
-//	mutex_unlock(mut, p1);
-//
-//
-//	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
-//	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
-//	printf("%s\n", q_toString(mut->waiting_pcbs));
-//	printf("Done que: %s\n\n", q_toString(mut->done_que));
-//
-//	mutex_unlock(mut, p2);
-//
-//
-//	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
-//	printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
-//	printf("%s\n", q_toString(mut->waiting_pcbs));
-//	printf("Done que: %s\n\n", q_toString(mut->done_que));
-//
-//	mutex_unlock(mut, p3);
-//
-//	printf("Lock Name: %d  Lock State: %d\n", mut->mutex_name, mut->mutex_state);
-//	//printf("Holding PCB: %s\n", pcb_toString(mut->using_pcb));
-//	printf("%s\n", q_toString(mut->waiting_pcbs));
-//	printf("Done que: %s\n\n", q_toString(mut->done_que));
-//
-//	return 0;
-
-//}
