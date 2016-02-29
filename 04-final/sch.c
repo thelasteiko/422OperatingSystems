@@ -1,6 +1,6 @@
 /*
  * Move the scheduler to a different class
- * for clarity. Thecher, scheduler and
+ * for clarity. The dispatcher, scheduler and
  * queues should be here. dispat
  */
 
