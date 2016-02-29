@@ -60,17 +60,6 @@ pcb_ptr pq_peek(pque_ptr this) {
 	return q_peek((que_ptr) this->priorityQue[index]);
 }
 
-int pq_updatepri(pque_ptr this) {
-    int i;
-    for (i = 1; i < TOTALQUE; i = i + 1) {
-        pcb_ptr p = q_updatepri(this->priorityQue[i]);
-        if (p) {
-            pq_enqueue(this, p);
-        }
-    }
-    return 0;
-}
-
 que_ptr pq_minpri(pque_ptr this) {
     int i;
     for (i = 0; i < TOTALQUE; i = i + 1) {

@@ -17,7 +17,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+
+int monitor (sch_ptr this) {
+  /*This is the greedy solution. Need to use an int array?*/
+  int i, n;
+  for (i = 0; i < TOTALQUE; i++) {
+    que_ptr temp = this->rdyq->priorityQue[i];
+    n = temp->node_count;
+    while (n > 0) {
+      pcb_ptr temp2 = q_dequeue(temp);
+      pcb_set_priority(temp2);
+      n = n - 1;
+      pq_enqueue(this->rdyq, temp2);
+    }
+  }
+  return 0;
+}
 
 pcb_ptr io_trap_handle(sch_ptr this, cpu_ptr that,
     pcb_ptr current, enum state_type device) {
@@ -44,7 +59,7 @@ pcb_ptr time_inter_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 pcb_ptr term_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current) {
     /*ISR for termination of a process.*/
     current->state = dead;
-    time(&current->termination);
+    current->termination = that->totaltime;
     return scheduler(this, that, current);
 }
 
@@ -57,7 +72,7 @@ pcb_ptr io_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current, enum state
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 1000; //This is how long it runs
+    int run = 10000; //This is how long it runs
     unsigned int pid = random1(0, 200);
     //This is how many PCBs will be made.
     unsigned int maxpid = pid + 10;
@@ -70,7 +85,7 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         //To keep track of termination and creation times.
         that->totaltime = that->totaltime + 1;
         //Update the priorities to prevent starvation.
-        sch_updatepri(this);
+        monitor(this);
         //Add PCBs if there are fewer than the max.
         if(pid < maxpid) {
            pid = sch_enqueue(this, that, pid);

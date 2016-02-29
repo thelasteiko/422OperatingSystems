@@ -30,7 +30,6 @@ int pq_enqueue(pque_ptr this, pcb_ptr new_node);
 pcb_ptr pq_dequeue(pque_ptr this);
 // returns the next node in the pque
 pcb_ptr pq_peek(pque_ptr this);
-int pq_updatepri (pque_ptr this);
 que_ptr pq_minpri(pque_ptr this);
 // returns a string information regarding the
 char * pq_toString(pque_ptr this);

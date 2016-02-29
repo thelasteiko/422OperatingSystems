@@ -7,8 +7,6 @@
  *
  *     Header file for process memory block.
  */
- 
- #include <time.h>
 
 #ifndef PCB
 #define PCB
@@ -37,7 +35,8 @@ typedef struct pcb_type {
     int IO_2_TRAPS[NUMTRAPS];
     int origpri; //the original priority
     int pridown; //time until demotion
-    int pritimeout; //the max time it can wait
+    int marker; //process has run
+    int oldmarker;
 	char * name; //used to tell the pairs for the prducer/consumer
 	int producer; // used to tell which one is the producer and which one is the consumer
 } pcb;
@@ -54,7 +53,7 @@ int pcb_set_pid (pcb_ptr this, int pid);
 /*Get the process id.*/
 int pcb_get_pid (pcb_ptr this);
 /*Set the priority of the current process.*/
-int pcb_set_priority (pcb_ptr this, int priority);
+int pcb_set_priority (pcb_ptr this);
 /*Returns the priority of the current process.*/
 int pcb_get_priority (pcb_ptr this);
 /*Set the state of the current process.*/
@@ -89,6 +88,7 @@ int pcb_set_io1 (pcb_ptr this, int * io_1_traps);
 int * pcb_get_io1 (pcb_ptr this);
 int pcb_set_io2 (pcb_ptr this, int * io_2_traps);
 int * pcb_get_io2 (pcb_ptr this);
+int pcb_set_marker(pcb_ptr this);
 /*Deallocates the memory dedicated to the current process.*/
 int pcb_destructor(pcb_ptr this);
 /*Returns a pointer to a String representation of the process.*/

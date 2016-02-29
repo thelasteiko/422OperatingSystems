@@ -11,9 +11,9 @@
 #include "sch.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 int cntx = 0;
 int cntx2 = 0;
@@ -222,7 +222,10 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     switch(inter) {
         case interrupted:
         current->state = ready;
-        next = dispatcher(to, from, current);
+        if (from->node_count <= 0)
+          next = current;
+        else
+          next = dispatcher(to, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;
@@ -262,14 +265,9 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         //pseudostack = next->pc;
         break;
     }
+    pcb_set_marker(next);
     that->pc = pseudostack;
     return next;
-}
-
-int sch_updatepri (sch_ptr this) {
-    /*Update the priority levels of processes
-     *to prevent starvation.*/
-    return pq_updatepri(this->rdyq);
 }
 
 int sch_dumptrash(sch_ptr this) {

@@ -36,7 +36,6 @@ int q_enqueue(que_ptr this, pcb_ptr new_node);
 pcb_ptr q_dequeue(que_ptr this);
 // peek at the first item in the que
 pcb_ptr q_peek(que_ptr this);
-pcb_ptr q_updatepri (que_ptr this);
 // Deallocates the memory dedicated to the que.
 int q_destructor(que_ptr this);
 // The information for the pcb's

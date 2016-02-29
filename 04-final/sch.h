@@ -32,7 +32,6 @@ int sch_ready(sch_ptr this);
 pcb_ptr idle_process (void);
 pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current);
 pcb_ptr scheduler (sch_ptr this, cpu_ptr that, pcb_ptr current);
-int sch_updatepri(sch_ptr this);
 int sch_dumptrash(sch_ptr this);
 int sch_destructor(sch_ptr this);
 

@@ -20,6 +20,12 @@ int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
     return error_code;
 }
+int pcb_set_original(pcb_ptr this, int priority) {
+  this->origpri = priority;
+  this->priority = priority;
+  this->pridown = (this->origpri * MAXTIME) + MAXTIME;
+  return 0;
+}
 pcb_ptr pcb_constructor() {
     pcb_ptr p = (pcb_ptr) malloc(sizeof(pcb));
     if (!p) error_handle("PCB could not be allocated.", 3, 1);
@@ -33,8 +39,9 @@ pcb_ptr pcb_constructor() {
     p->termination = 0;
     p->terminate = 0;
     p->termcount = 0;
-    p->pritimeout = 0;
     p->pridown = 0;
+    p->marker = 0;
+    p->oldmarker = -1;
     p->name = (char *) malloc(sizeof(char));
     p->producer = -1;
     int reg[NUMTRAPS];
@@ -59,9 +66,9 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->terminate = terminate;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
-		this->name = NULL;
-		this->producer = -1;
-        pcb_set_priority(this, priority);
+        this->name = NULL;
+        this->producer = -1;
+        pcb_set_original(this, priority);
         return 0;
 }
 int pcb_set_pid (pcb_ptr this, int pid) {
@@ -71,16 +78,29 @@ int pcb_set_pid (pcb_ptr this, int pid) {
 int pcb_get_pid (pcb_ptr this) {
     return this->pid;
 }
-int pcb_set_priority (pcb_ptr this, int priority) {
-    if (priority > MAXPRI)
-        return error_handle("Priority cannot be over the max priority.", 2, 0);
-    this->priority = priority;
-    this->pritimeout = this->origpri * MAXTIME;
-    this->pridown = this->priority * MAXTIME;
-    return 0;
+
+int pcb_set_priority (pcb_ptr this) {
+  if (this->marker < this->oldmarker) {
+    if (this->pridown == 0) {
+      if (this->priority >= 0)
+        this->priority = this->priority - 1;
+    } else
+      this->pridown = this->pridown - 1;
+  } else {
+    this->priority = this->origpri;
+    this->oldmarker = this->marker;
+  }
+  //this->pridown = (this->origpri * MAXTIME) + MAXTIME;
+  return 0;
 }
 int pcb_get_priority (pcb_ptr this) {
     return this->priority;
+}
+int pcb_set_marker(pcb_ptr this) {
+  this->marker = this->marker + 1;
+  this->priority = this->origpri;
+  this->pridown = 0;
+  return 0;
 }
 int pcb_set_state (pcb_ptr this, enum state_type state) {
     this->state = state;
@@ -179,7 +199,8 @@ int pcb_destructor(pcb_ptr this) {
 }
 char * pcb_toString(pcb_ptr this) {
     char * str;
-    int pri, st, id, cre, t1, t2, tc;
+    int pri, st, id, t2, tc;
+    long cre, t1;
     unsigned int pc, mpc;
     str = (char *) malloc(sizeof(char) * 80);
     //PRI: 1, PID: 0, STATE: ready, PC: 0x00, IO1: [0,0,0,0], IO2: [0,0,0,0]

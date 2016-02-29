@@ -53,8 +53,10 @@ int q_enqueue(que_ptr this, pcb_ptr new_node) {
 pcb_ptr q_dequeue(que_ptr this) {
 	pcb_ptr p = (pcb_ptr) this->first_node->my_pcb;
 	if (p != NULL) {
+    node_ptr temp = this->first_node;
 		this->first_node = this->first_node->next_node;
 		this->node_count = this->node_count - 1;
+    free(temp);
 	}
 	return p;
 }
@@ -63,47 +65,10 @@ pcb_ptr q_peek(que_ptr this) {
 	return (pcb_ptr) this -> first_node -> my_pcb;
 }
 
-pcb_ptr q_updatepri (que_ptr this) {
-    /*node_ptr prev = (node_ptr) this->first_node;
-    node_ptr p = NULL;
-    if (prev->next_node) {
-        p = (node_ptr) prev->next_node;
-    }
-    while (p && prev) {
-        pcb_ptr current = p->my_pcb;
-        int k = current->pritimeout;
-        int t = current->pridown;
-        if (current->origpri != current->priority
-            && k <= current->origpri * MAXTIME) {
-            t = t - 1;
-            if (t <= 0) {
-                pcb_set_priority(current, current->origpri);
-            }
-           prev->next_node = p->next_node;
-           this->node_count = this->node_count - 1;
-           free (p);
-           return current;
-        }
-        k = k - 1;
-        if (k <= 0) {
-           pcb_set_priority(current, current->priority + 1);
-           //remove from list
-           prev->next_node = p->next_node;
-           this->node_count = this->node_count - 1;
-           free (p);
-           return current;
-        }
-        current->pritimeout = k;
-        current->pridown = t;
-        prev = p;
-        p = p->next_node;
-    }*/
-    return NULL;
-}
 /*Deallocates the memory dedicated to the que.*/
 int q_destructor(que_ptr this) {
 	free(this);
-    return 0;
+  return 0;
 }
 /*The information for the pcb's*/
 char * q_toString(que_ptr this) {
