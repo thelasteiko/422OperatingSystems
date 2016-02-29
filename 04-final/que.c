@@ -64,7 +64,7 @@ pcb_ptr q_peek(que_ptr this) {
 }
 
 pcb_ptr q_updatepri (que_ptr this) {
-    node_ptr prev = (node_ptr) this->first_node;
+    /*node_ptr prev = (node_ptr) this->first_node;
     node_ptr p = NULL;
     if (prev->next_node) {
         p = (node_ptr) prev->next_node;
@@ -97,7 +97,7 @@ pcb_ptr q_updatepri (que_ptr this) {
         current->pridown = t;
         prev = p;
         p = p->next_node;
-    }
+    }*/
     return NULL;
 }
 /*Deallocates the memory dedicated to the que.*/
