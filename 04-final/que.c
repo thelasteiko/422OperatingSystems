@@ -67,7 +67,7 @@ pcb_ptr q_updatepri (que_ptr this) {
     node_ptr prev = (node_ptr) this->first_node;
     node_ptr p = NULL;
     if (prev->next_node) {
-        node_ptr p = (node_ptr) prev->next_node;
+        p = (node_ptr) prev->next_node;
     }
     while (p && prev) {
         pcb_ptr current = p->my_pcb;

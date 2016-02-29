@@ -130,7 +130,7 @@ pcb_ptr make_pcb(int pid, long rawTime) {
     return node;
 }
 
-pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
+pcb_ptr sch_init(sch_ptr this, cpu_ptr that, unsigned int * pid) {
     *pid = sch_enqueue(this, that, *pid);
     sch_ready(this);
     pcb_ptr current = pq_dequeue(this->rdyq);
@@ -139,7 +139,7 @@ pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid) {
     return current;
 }
 
-int sch_enqueue(sch_ptr this, cpu_ptr that, int pid) {
+int sch_enqueue(sch_ptr this, cpu_ptr that, unsigned int pid) {
     /*Initialize some PCBs to be run.*/
     int i = random1(1, 5);
     while(i) {
@@ -155,8 +155,8 @@ int sch_ready (sch_ptr this) {
 	printf("\r\nEnqueing %d pcb's.\r\n", this->enq->node_count);
 	while(this->enq->node_count > 0) {
         pcb_ptr node = q_dequeue(this->enq);
-        pq_enqueue(this->rdyq, node);
         printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
+        pq_enqueue(this->rdyq, node);
     }
     return 0;
 }
@@ -190,8 +190,8 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
         pcb_destructor(current);
     else q_enqueue(to, current);
     
-    printf("To %s\r\n", q_toString(to));
-    printf("From: %s\r\n", q_toString(from));
+    //printf("To %s\r\n", q_toString(to));
+    //printf("From: %s\r\n", q_toString(from));
     
     pcb_ptr next = NULL;
     if(from->node_count > 0)
@@ -214,9 +214,11 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pcb_ptr next = NULL;
     pseudostack = that->pc;
     enum state_type inter = current->state;
-    printf("%s\n", pq_toString(this->rdyq));
+    //printf("%s\n", pq_toString(this->rdyq));
+    printf("\r\nSwitching...\r\n");
+    int pri = pcb_get_priority(current);
     que_ptr from = pq_minpri(this->rdyq);
-    que_ptr to = this->rdyq->priorityQue[current->priority];
+    que_ptr to = this->rdyq->priorityQue[pri];
     switch(inter) {
         case interrupted:
         current->state = ready;
@@ -283,7 +285,7 @@ int sch_dumptrash(sch_ptr this) {
 int sch_destructor(sch_ptr this) {
     /*Deallocates a schedule object.*/
     q_destructor(this->enq);
-    pq_destructor(this->rdyq);
+    pque_destructor(this->rdyq);
     q_destructor(this->iowait1);
     q_destructor(this->iowait2);
     q_destructor(this->deadq);

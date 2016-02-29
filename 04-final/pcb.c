@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #define MAXTIME 300
 
@@ -36,6 +35,8 @@ pcb_ptr pcb_constructor() {
     p->termcount = 0;
     p->pritimeout = 0;
     p->pridown = 0;
+    p->name = (char *) malloc(sizeof(char));
+    p->producer = -1;
     int reg[NUMTRAPS];
     int i;
     for(i = 0; i < NUMTRAPS; i = i+1) {
@@ -116,14 +117,14 @@ int pcb_set_creation (pcb_ptr this, long creation) {
     this->creation = creation;
     return 0;
 }
-time_t pcb_get_creation (pcb_ptr this) {
+long pcb_get_creation (pcb_ptr this) {
     return this->creation;
 }
 int pcb_set_termination (pcb_ptr this, long termination) {
     this->termination = termination;
     return 0;
 }
-time_t pcb_get_termination (pcb_ptr this) {
+long pcb_get_termination (pcb_ptr this) {
     return this->termination;
 }
 int pcb_set_terminate (pcb_ptr this, int terminate) {
@@ -177,11 +178,9 @@ int pcb_destructor(pcb_ptr this) {
     return 0;
 }
 char * pcb_toString(pcb_ptr this) {
-    char * str, r;
+    char * str;
     int pri, st, id, cre, t1, t2, tc;
     unsigned int pc, mpc;
-    int * io1;
-    int * io2;
     str = (char *) malloc(sizeof(char) * 80);
     //PRI: 1, PID: 0, STATE: ready, PC: 0x00, IO1: [0,0,0,0], IO2: [0,0,0,0]
     pri = pcb_get_priority(this);
@@ -193,8 +192,6 @@ char * pcb_toString(pcb_ptr this) {
     t1 = pcb_get_termination(this);
     t2 = pcb_get_terminate(this);
     tc = pcb_get_termcount(this);
-    io1 = pcb_get_io1(this);
-    io2 = pcb_get_io2(this);
     
     sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %d, "
             "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "

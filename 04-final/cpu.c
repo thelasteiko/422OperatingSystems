@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "sch.h"
 #include <stdlib.h>
 
 cpu_ptr cpu_constructor () {
@@ -9,6 +10,7 @@ cpu_ptr cpu_constructor () {
     mycpu->totaltime = 0;
     mycpu->iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
     mycpu->iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
+    return mycpu;
 }
 
 int time_inter (cpu_ptr this) {

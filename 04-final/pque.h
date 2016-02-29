@@ -14,8 +14,10 @@
 #include "que.h"
 #include "pcb.h"
 
+#define TOTALQUE 4
+
 typedef struct pque_type {
-	 que_ptr priorityQue[MAXPRI];
+	 que_ptr priorityQue[TOTALQUE];
      int node_count;
 } pque;
 
