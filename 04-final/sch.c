@@ -1,7 +1,7 @@
 /*
  * Move the scheduler to a different class
  * for clarity. The dispatcher, scheduler and
- * queues should be here.
+ * queues should be here. dispat
  */
 
 #include "pcb.h"
@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
+#include <math.h>
 
 int cntx = 0;
 int cntx2 = 0;
@@ -21,7 +22,7 @@ int iop = 0;
 char * proConStart = "ProducerConsumerPair:";
 int numOfProCon; // the number of different Producer/Consumers that there are currently.
 int proConVar[10]; //A global variable for each Producer/Consumer pair. 
-				   //Producer / 2 = (Consumer - 1) / 2 = array number.
+int oldProConVar[10]; //Producer / 2 = (Consumer - 1) / 2 = array number.
 
 int random1(int min, int max) {
     /*Creates a random number, yay.*/
@@ -29,6 +30,37 @@ int random1(int min, int max) {
     seed = time(NULL);
     srand((unsigned int)seed);
     return (rand() % (max-min)) + min;
+}
+
+// checks to see whether it is a producer or consumer and then does something.
+// returns zero if able to do operations, 1 if producer needs to wait for consumer,
+// 2 if needs o wait for the producer.
+int producerConsumer(pcb_ptr this) {
+	int num = floor(this->producer / 2);
+	int gtg = 0;
+
+	if (this->producer % 2 == 0) {
+		if (proConVar[num] == oldProConVar[num]) {
+			proConVar[num]++;
+			printf(this->name);
+			printf(" changes value from %d to %d.\n", oldProConVar[num], proConStart[num]);
+		}
+		else {
+			gtg = 1;
+		}
+	}
+	else {
+		if (proConVar[num] > oldProConVar[num]) {
+			printf(this->name);
+			printf(" reads in value of %d.\n", proConStart[num]);
+			oldProConVar[num]++;
+		}
+		else {
+			gtg = 2;
+		}
+	}
+
+	return gtg;
 }
 
 sch_ptr sch_constructor () {
