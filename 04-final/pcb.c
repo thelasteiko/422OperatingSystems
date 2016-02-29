@@ -58,7 +58,7 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
         this->terminate = terminate;
         pcb_set_io1(this, IO_1_TRAPS);
         pcb_set_io2(this, IO_2_TRAPS);
-		this->name = null;
+		this->name = NULL;
 		this->producer = -1;
         pcb_set_priority(this, priority);
         return 0;

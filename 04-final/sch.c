@@ -6,11 +6,13 @@
 
 #include "pcb.h"
 #include "que.h"
+#include "pque.h"
 #include "cpu.h"
 #include "sch.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 int cntx = 0;
 int cntx2 = 0;
@@ -34,7 +36,7 @@ sch_ptr sch_constructor () {
      * and manages processes. */
     sch_ptr sched = (sch_ptr) malloc(sizeof(sch));
     sched->enq = que_constructor();
-    sched->rdyq = que_constructor();
+    sched->rdyq = pq_constructor();
     sched->iowait1 = que_constructor();
     sched->iowait2 = que_constructor();
     sched->deadq = que_constructor();
@@ -75,7 +77,7 @@ pcb_ptr make_pcb(int pid, long rawTime) {
         else next = next+100;
     }
     pcb_initialize(node, pid, pri, st, pc, mpc,
-        0, t2, io1, io2);
+        rawTime, t2, io1, io2);
 	if (pri == 1) {
 		if (numOfProCon < 20) {
 			char * name;
@@ -119,10 +121,10 @@ int sch_enqueue(sch_ptr this, cpu_ptr that, int pid) {
 int sch_ready (sch_ptr this) {
     /*Move all items from the enqueueing queue to the ready queue.*/
 	printf("\r\nEnqueing %d pcb's.\r\n", this->enq->node_count);
-	while(this->enq->node_count) {
+	while(this->enq->node_count > 0) {
         pcb_ptr node = q_dequeue(this->enq);
-        printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
         pq_enqueue(this->rdyq, node);
+        printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
     }
     return 0;
 }
@@ -137,7 +139,7 @@ pcb_ptr idle_process () {
         io1[i] = -1;
         io2[i] = -1;
     }
-    pcb_initialize(idle,-1,15, running, 0, 10,
+    pcb_initialize(idle,-1,MAXPRI, running, 0, 10,
         0, 1, io1, io2);
     return idle;
 }
@@ -157,6 +159,7 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
     else q_enqueue(to, current);
     
     printf("To %s\r\n", q_toString(to));
+    printf("From: %s\r\n", q_toString(from));
     
     pcb_ptr next = NULL;
     if(from->node_count > 0)
@@ -179,8 +182,9 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pcb_ptr next = NULL;
     pseudostack = that->pc;
     enum state_type inter = current->state;
+    printf("%s\n", pq_toString(this->rdyq));
     que_ptr from = pq_minpri(this->rdyq);
-    que_ptr to = this->rdyq->priorityQueue[current->priority];
+    que_ptr to = this->rdyq->priorityQue[current->priority];
     switch(inter) {
         case interrupted:
         current->state = ready;
@@ -247,7 +251,7 @@ int sch_dumptrash(sch_ptr this) {
 int sch_destructor(sch_ptr this) {
     /*Deallocates a schedule object.*/
     q_destructor(this->enq);
-    q_destructor(this->rdyq);
+    pq_destructor(this->rdyq);
     q_destructor(this->iowait1);
     q_destructor(this->iowait2);
     q_destructor(this->deadq);

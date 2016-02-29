@@ -64,10 +64,10 @@ pcb_ptr q_peek(que_ptr this) {
 }
 
 pcb_ptr q_updatepri (que_ptr this) {
-    node_type prev = (node_type) this->first_node;
-    node_type p = null;
-    if (prev->next) {
-        node_type p = (node_type) prev->next_node;
+    node_ptr prev = (node_ptr) this->first_node;
+    node_ptr p = NULL;
+    if (prev->next_node) {
+        node_ptr p = (node_ptr) prev->next_node;
     }
     while (p && prev) {
         pcb_ptr current = p->my_pcb;
@@ -98,7 +98,7 @@ pcb_ptr q_updatepri (que_ptr this) {
         prev = p;
         p = p->next_node;
     }
-    return null;
+    return NULL;
 }
 /*Deallocates the memory dedicated to the que.*/
 int q_destructor(que_ptr this) {
@@ -111,7 +111,7 @@ char * q_toString(que_ptr this) {
 	node_ptr node = NULL;
 
     if (!this) return "NO Q";
-    char * str = (char *) malloc((sizeof(char) * this->node_count * (60+4))+10);
+    char * str = (char *) malloc(sizeof(char) * ((this->node_count * (60+4))+10));
     strcat(str, "Q: ");
 
 	if (this->node_count > 0) {

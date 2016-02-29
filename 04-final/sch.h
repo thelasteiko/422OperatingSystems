@@ -25,9 +25,9 @@ typedef sch * sch_ptr;
 
 int random1(int min, int max);
 sch_ptr sch_constructor (void);
-pcb_ptr make_pcb(int pid);
+pcb_ptr make_pcb(int pid, long rawTime);
 pcb_ptr sch_init(sch_ptr this, cpu_ptr that, int * pid);
-int sch_enqueue(sch_ptr this, int pid);
+int sch_enqueue(sch_ptr this, cpu_ptr that, int pid);
 int sch_ready(sch_ptr this);
 pcb_ptr idle_process (void);
 pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current);
