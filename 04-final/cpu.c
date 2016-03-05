@@ -10,6 +10,7 @@ cpu_ptr cpu_constructor () {
     mycpu->totaltime = 0;
     mycpu->iotime1 = random1(MAXTIME * 3, MAXTIME * 4);
     mycpu->iotime2 = random1(MAXTIME * 3, MAXTIME * 4);
+    mycpu->mtxtime = 0;
     return mycpu;
 }
 

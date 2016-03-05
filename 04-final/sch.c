@@ -19,10 +19,8 @@ int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
 int iop = 0;
-char * proConStart = "ProducerConsumerPair:";
-int numOfProCon; // the number of different Producer/Consumers that there are currently.
-int proConVar[10]; //A global variable for each Producer/Consumer pair. 
-int oldProConVar[10]; //Producer / 2 = (Consumer - 1) / 2 = array number.
+//char * proConStart = "ProducerConsumerPair:";
+//int numOfProCon; // the number of different Producer/Consumers that there are currently.
 
 int random1(int min, int max) {
     /*Creates a random number, yay.*/
@@ -36,10 +34,11 @@ int random1(int min, int max) {
 // returns zero if able to do operations, 1 if producer needs to wait for consumer,
 // 2 if needs o wait for the producer.
 int producerConsumer(pcb_ptr this) {
-	int num = floor(this->producer / 2);
+  //TODO put into handler in cpuloop
+	int num = this->pairnumber;
 	int gtg = 0;
 
-	if (this->producer % 2 == 0) {
+	if (this->type == producer) {
 		if (proConVar[num] == oldProConVar[num]) {
 			proConVar[num]++;
 			printf(this->name);
@@ -59,7 +58,6 @@ int producerConsumer(pcb_ptr this) {
 			gtg = 2;
 		}
 	}
-
 	return gtg;
 }
 
@@ -72,62 +70,11 @@ sch_ptr sch_constructor () {
     sched->iowait1 = que_constructor();
     sched->iowait2 = que_constructor();
     sched->deadq = que_constructor();
+    sched->numreg = 0;
+    sched->numbusy = 0;
+    sched->numpair = 0;
+    sched->nummutual = MAXPAIR;
     return sched;
-}
-
-pcb_ptr make_pcb(int pid, long rawTime) {
-    /*Create a randomized pcb with the pid.
-    Need to include priority flag and mutex array.*/
-    pcb_ptr node = pcb_constructor();
-    int prob = random1(1, 100);
-    int pri = -1;
-    if (prob <= 5) pri = 0;
-    else if (prob <= 85) pri = 1;
-    else if (prob <= 95) pri = 2;
-    else pri = 3;
-    int st = ready;
-    unsigned int pc = 0;
-    unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 4);
-    int t2 = random1(2, 15);
-    unsigned int last, i, next, k;
-    int io1[NUMTRAPS];
-    int io2[NUMTRAPS];
-    last = pc;
-    if (mpc - last < 1000) next = 50;
-    else next = 100;
-    for (i = 0; i < NUMTRAPS; i = i + 1) {
-    	if (last > next) {
-    		next = next + last;
-    	}
-        io1[i] = random1(last, next);
-        //printf("last = %d next = %d random # produced = %d\n", last, next,io1[i]);
-        k = random1(last, next);
-        while(k == io1[i]) k = random1(last, next);
-        io2[i] = k;
-        last = next;
-        if (last > mpc-1000) next = next+50;
-        else next = next+100;
-    }
-    pcb_initialize(node, pid, pri, st, pc, mpc,
-        rawTime, t2, io1, io2);
-	if (pri == 1) {
-		if (numOfProCon < 20) {
-			char * name;
-			char * place;
-			strcpy(name, proConStart);
-			if (numOfProCon % 2 == 0) {
-				sprintf(place, "%d", numOfProCon + 1);
-			}
-			else {
-				sprintf(place, "%d", numOfProCon);
-			}
-			strcat(name, place);
-			pcb_set_name(node, name); // set pcb name
-			pcb_set_pro_con(node, numOfProCon); // set pcb proCon Number
-			numOfProCon++;
-		}
-	}
-    return node;
 }
 
 pcb_ptr sch_init(sch_ptr this, cpu_ptr that, unsigned int * pid) {
@@ -138,14 +85,136 @@ pcb_ptr sch_init(sch_ptr this, cpu_ptr that, unsigned int * pid) {
     that->pc = pseudostack;
     return current;
 }
+int * create_list (int min, int max) {
+  /* Create a unique set of NUMTRAPS integers
+   * based on the range given. */
+  unsigned int last, i, next, k;
+  int list[NUMTRAPS];
+  last = min;
+  k = max / 10;
+  next = k;
+  for (i = 0; i < NUMTRAPS; i = i + 1) {
+    if (next > max) next = max;
+    list[i] = random1(last, next);
+    last = list[i] + 1;
+    next = last + k;
+  }
+  return list;
+}
 
+pcb_ptr make_regular (unsigned int pid, long rawTime, int pri,
+  int mpc, int t2) {
+  pcb_ptr this = pcb_constructor();
+  //,pid, pri, state, type, pc, maxpc, cre, term, io1, io2
+  int io1[NUMTRAPS] = create_list(0, mpc);
+  int io2[NUMTRAPS] = create_list(io1[NUMTRAPS-1], mpc);
+  pcb_initialize(this, pid, pri, ready, regular,
+    mpc, rawTime, t2);
+  pcb_set_io1(this, io1);
+  pcb_set_io2(this, io2);
+}
+pcb_ptr make_busy (unsigned int pid, long rawTime, int pri,
+  int mpc, int t2) {
+  pcb_initialize(this, pid, pri, ready, busy,
+    mpc, rawTime, t2);
+}
+pcb_ptr make_producer (unsigned int pid, long rawTime, int pri,
+  int mpc, int t2) {
+  //When determing where to lock, have it lock between IO
+  //for a time before the next IO
+  pcb_ptr this = pcb_constructor();
+  int io1[NUMTRAPS] = {10, 50, 100, 200};
+  int io2[NUMTRAPS] = {30, 70, 150, 300};
+  int mtx[NUMTRAPS] = {35, 75, 155, 305};
+  int mtxlock[NUMTRAPS] = {numpair,numpair,numpair,numpair};
+  pcb_initialize(this, pid, pri, ready, producer, mpc,
+    rawTime, t2);
+  this->pairnumber = numpair;
+  pcb_set_io1(this, io1);
+  pcb_set_io2(this, io2);
+  pcb_set_mtx(this, mtx);
+  return this;
+}
+pcb_ptr make_consumer (pcb_ptr prod, unsigned int pid, long rawTime,
+  int pri, int mpc, int t2) {
+  pcb_ptr this = pcb_constructor();
+  pcb_initialize(this, pid, pri, ready, consumer, mpc,
+    rawTime, t2);
+  pcb_set_io1(this, prod->IO_1_TRAPS);
+  pcb_set_io2(this, prod->IO_2_TRAPS);
+  pcb_set_mtx(this, prod->mtx);
+  this->pairnumber = numpair;
+  return this;
+}
+pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
+  int mpc, int t2) {
+  //Mutual should be using the same mtx list but
+  //it locks two mutex instead of one
+  pcb_ptr this = pcb_constructor();
+  int io1[NUMTRAPS] = {10, 50, 100, 200};
+  int io2[NUMTRAPS] = {30, 70, 150, 300};
+  //each mtx lock it locks 0 and 1
+  int mtx[NUMTRAPS] = {35, 75, 155, 305};
+  int mtxlock[NUMTRAPS] = {nummutual, nummutual+1, nummutual, nummutual+1}; //mutex list
+  pcb_initialize(this, pid, pri, ready, mutual, mpc,
+    rawTime, t2);
+  pcb_set_io1(this, io1);
+  pcb_set_io2(this, io2);
+  pcb_set_mtx(this, mtx);
+  pcb_set_mtx_lockon(this, mtxlock);
+  this->pairnumber = nummutual;
+  return this;
+}
+//Condition variables are created when a thread is blocked.
+//mutexes are created when the pairs are
+int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
+  /* Determine the priority and type then
+   * call the appropriate making method.*/
+  int pri = -1;
+  int prob = random1(1, 100);
+  if (prob <= 5) pri = 0;
+  else if (prob <= 85) pri = 1;
+  else if (prob <= 95) pri = 2;
+  else pri = 3;
+  unsigned int mpc = (unsigned int) random1(MAXTIME * 3, MAXTIME * 4);
+  int t2 = random1(2, 15);
+  //types: regular, busy, producer, consumer, mutual resource
+  prob = random1(1, 100);
+  if (prob <= 40 && this->numbusy < MAXBUSY) {
+    q_enqueue(this->enq, make_busy(pid, that->totaltime, 0));
+    pid = pid + 1;
+    this->numbusy = this->numbusy + 1;
+  } else if (prob <= 75) {
+    if (this->numpair < MAXPAIR) { //TODO need to add the mutex or variable
+      q_enqueue(this->enq, make_producer(pid, that->totaltime, pri, mpc, t2));
+      pid = pid + 1;
+      q_enqueue(this->enq, make_consumer(pid, that->totaltime, pri, mpc, t2));
+      pid = pid + 1;
+      mutex_ptr m = mutex_constructor(this->numpair);
+      this->mutexes[this->numpair] = m;
+      this->numpair = this->numpair + 1;
+    } else if (this->nummutual < MAXMUTUAL) {
+      q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
+      pid = pid + 1;
+      q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
+      pid = pid + 1;
+      mutex_ptr m = mutex_constructor(this->nummutual);
+      this->mutexes[this->nummutual] = m;
+      this->nummutual = this->nummutual + 1;
+    }
+  } else if (this->numreg < MAXREG) {
+    q_enqueue(this->enq, make_regular(pid, that->totaltime, pri, mpc, t2));
+    pid = pid + 1;
+    this->numreg = this->numreg + 1;
+  }
+  return pid;
+}
 int sch_enqueue(sch_ptr this, cpu_ptr that, unsigned int pid) {
     /*Initialize some PCBs to be run.*/
-    int i = random1(1, 5);
-    while(i) {
-        pcb_ptr node = make_pcb(pid, that->totaltime);
-        q_enqueue(this->enq, node);
-        pid = pid + 1;
+    unsigned int i = random1(1, 5);
+    unsigned int p = pid
+    while(i < (pid-p)) {
+        pid = make_pcb(this, that, pid);
         i = i - 1;
     }
     return pid;
@@ -258,14 +327,41 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         next = current;
         break;
         
+        case blocked:
+        current->pc = pseudostack;
+        next = pq_dequeue(this->rdyq);
+        next->state = running;
+        pseudostack = next->pc;
+        break;
+        
+        case unblocked:
+        current->state = ready;
+        pq_enqueue(this->rdyq, current);
+        break;
+        
         case dead:
         //put in deadq and return next rdyq pcb
+        switch(current->type) {
+          case regular:
+          this->numreg = this->numreg - 1;
+          break;
+          case busy:
+          this->numbusy = this->numbusy - 1;
+          break;
+          case producer:
+          break;
+          case consumer:
+          this->numpair = this->numpair-1;
+          break;
+          case mutual:
+          break;
+        }
         next = dispatcher(this->deadq, from, current);
         next->state = running;
         //pseudostack = next->pc;
         break;
     }
-    pcb_set_marker(next);
+    if (next) pcb_set_marker(next);
     that->pc = pseudostack;
     return next;
 }

@@ -20,6 +20,10 @@ int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
     return error_code;
 }
+int min(int a, int b) {
+  if (a <= b) return a;
+  else return b;
+}
 int pcb_set_original(pcb_ptr this, int priority) {
   this->origpri = priority;
   this->priority = priority;
@@ -42,41 +46,33 @@ pcb_ptr pcb_constructor() {
     p->pridown = 0;
     p->marker = 0;
     p->oldmarker = -1;
-    p->name = (char *) malloc(sizeof(char));
-    p->producer = -1;
+    //p->name = (char *) malloc(sizeof(char));
+    p->pairnumber = -1;
+    p->mtxtime = 0;
+    p->index = -1;
     int reg[NUMTRAPS];
     int i;
     for(i = 0; i < NUMTRAPS; i = i+1) {
-        reg[i] = 0;
+        reg[i] = -1;
     }
     memcpy(p->IO_1_TRAPS, reg, NUMTRAPS);
     memcpy(p->IO_2_TRAPS, reg, NUMTRAPS);
+    memcpy(p->mtx, reg, NUMTRAPS);
+    memcpy(p->mtx_lockon, reg, NUMTRAPS);
     return p;
 }
 int pcb_initialize(pcb_ptr this, int pid, int priority,
-    enum state_type state, unsigned int pc, unsigned int max_pc,
-    long creation, int terminate,
-    int * IO_1_TRAPS, int * IO_2_TRAPS) {
+    enum state_type state, enum process_type type,
+    unsigned int max_pc, long creation, int terminate) {
         this->pid = pid;
         this->origpri = priority;
         this->state = state;
-        this->pc = pc;
+        this->type = type;
         this->max_pc = max_pc;
         this->creation = creation;
         this->terminate = terminate;
-        pcb_set_io1(this, IO_1_TRAPS);
-        pcb_set_io2(this, IO_2_TRAPS);
-        this->name = NULL;
-        this->producer = -1;
         pcb_set_original(this, priority);
         return 0;
-}
-int pcb_set_pid (pcb_ptr this, int pid) {
-    this->pid = pid;
-    return 0;
-}
-int pcb_get_pid (pcb_ptr this) {
-    return this->pid;
 }
 
 int pcb_set_priority (pcb_ptr this) {
@@ -102,65 +98,7 @@ int pcb_set_marker(pcb_ptr this) {
   this->pridown = 0;
   return 0;
 }
-int pcb_set_state (pcb_ptr this, enum state_type state) {
-    this->state = state;
-    return 0;
-}
-int pcb_set_name(pcb_ptr this, char * myName) {
-	this->name = myName;
-	return 0;
-}
-int pcb_set_pro_con(pcb_ptr this, int proCon) {
-	this->producer = proCon;
-	return 0;
-}
-enum state_type pcb_get_state (pcb_ptr this) {
-    if (this->state < ready || this->state > dead)
-        return error_handle ("Invalid state.", -1, 0);
-    return this->state;
-}
-int pcb_set_pc (pcb_ptr this, unsigned int pc) {
-    this->pc = pc;
-    return 0;
-}
-unsigned int pcb_get_pc (pcb_ptr this) {
-    return this->pc;
-}
-int pcb_set_max_pc (pcb_ptr this, unsigned int max_pc) {
-    this->max_pc = max_pc;
-    return 0;
-}
-unsigned int pcb_get_max_pc (pcb_ptr this) {
-    return this->max_pc;
-}
-int pcb_set_creation (pcb_ptr this, long creation) {
-    this->creation = creation;
-    return 0;
-}
-long pcb_get_creation (pcb_ptr this) {
-    return this->creation;
-}
-int pcb_set_termination (pcb_ptr this, long termination) {
-    this->termination = termination;
-    return 0;
-}
-long pcb_get_termination (pcb_ptr this) {
-    return this->termination;
-}
-int pcb_set_terminate (pcb_ptr this, int terminate) {
-    this->terminate = terminate;
-    return 0;
-}
-int pcb_get_terminate (pcb_ptr this) {
-    return this->terminate;
-}
-int pcb_set_termcount (pcb_ptr this, int termcount) {
-    this->termcount = termcount;
-    return 0;
-}
-int pcb_get_termcount (pcb_ptr this) {
-    return this->termcount;
-}
+
 int pcb_set_io1 (pcb_ptr this, int * io_1_traps) {
 	int i;
 	for (i = 0; i < NUMTRAPS; i++) {
@@ -192,6 +130,58 @@ int * pcb_get_io2 (pcb_ptr this) {
     }
     return traps;
 }
+int pcb_set_mtx (pcb_ptr this, int * mtx) {
+	int i;
+	for (i = 0; i < NUMTRAPS; i++) {
+		this->mtx[i] = mtx[i];
+	}
+    return 0;
+}
+int * pcb_get_mtx (pcb_ptr this) {
+    int * traps = (int*) malloc(sizeof(int)*NUMTRAPS);
+    int i = 0;
+    for (; i < NUMTRAPS; i++) {
+        traps[i] = this->mtx[i];
+    }
+    return traps;
+}
+int pcb_set_mtxlock (pcb_ptr this, int * mtx) {
+	int i;
+	for (i = 0; i < NUMTRAPS; i++) {
+		this->mtx_lockon[i] = mtx[i];
+	}
+  this->index = 0;
+  this->mtxtime = mtx[0] + min(
+    this->IO_1_TRAPS[0], this->IO_2_TRAPS[0]);
+  return 0;
+}
+int * pcb_get_mtx (pcb_ptr this) {
+    int * traps = (int*) malloc(sizeof(int)*NUMTRAPS);
+    int i = 0;
+    for (; i < NUMTRAPS; i++) {
+        traps[i] = this->mtx_lockon[i];
+    }
+    return traps;
+}
+
+int mtx_inter (pcb_ptr this) {
+  /* Checking if the current is in mtx lock,
+   * if so count down until mtx is released.*/
+  if(this->index < 0 || this->index >= NUMTRAPS)
+    return 0;
+  if (this->mtxtime == 0) {
+    this->index = this->index + 1;
+    this->mtxtime = mtx[this->index] -1 + min(
+      this->IO_1_TRAPS[this->index], this->IO_2_TRAPS[this->index])
+    return 1;
+  } else
+    this->mtxtime = this->mtxtime - 1;
+  return 0;
+}
+
+int pcb_get_mtx_index(pcb_ptr this) {
+  return this->mtx_lockon[this->index];
+}
 
 int pcb_destructor(pcb_ptr this) {
     free (this);
@@ -205,14 +195,14 @@ char * pcb_toString(pcb_ptr this) {
     str = (char *) malloc(sizeof(char) * 80);
     //PRI: 1, PID: 0, STATE: ready, PC: 0x00, IO1: [0,0,0,0], IO2: [0,0,0,0]
     pri = pcb_get_priority(this);
-    id = pcb_get_pid(this);
-    st = pcb_get_state(this);
-    pc = pcb_get_pc(this);
-    mpc = pcb_get_max_pc(this);
-    cre = pcb_get_creation(this);
-    t1 = pcb_get_termination(this);
-    t2 = pcb_get_terminate(this);
-    tc = pcb_get_termcount(this);
+    id = this->pid;
+    st = this->state;
+    pc = this->pc;
+    mpc = this->max_pc;
+    cre = this->creation;
+    t1 = this->termination;
+    t2 = this->terminate;
+    tc = this->termcount;
     
     sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %d, "
             "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "

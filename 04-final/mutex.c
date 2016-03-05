@@ -18,7 +18,8 @@
 mutex_ptr mutex_constructor(int name) {
 	mutex_ptr mut = (mutex_ptr) malloc (sizeof(mutex));
 	mut->waiting_pcbs = que_constructor();
-	mut->done_que = que_constructor();
+  mut->using_pcb = NULL;
+	//mut->done_que = que_constructor();
 	mut->mutex_state = 0;
 	mut->mutex_name = name;
 	return mut;
@@ -27,15 +28,11 @@ mutex_ptr mutex_constructor(int name) {
 int mutex_lock (mutex_ptr this, pcb_ptr thispcb) {
 	int result = 0;
 	if(this->mutex_state == 0) {
-		if (thispcb->state == blocked) {
-			thispcb->state = running;//whatever it used to be
-		}
 		result = 1;
 		this->using_pcb = thispcb;
 		this->mutex_state = 1;
-		return result;
 	} else {
-		pcb_set_state(thispcb, blocked);
+		thispcb->state = blocked;
 		q_enqueue(this->waiting_pcbs, thispcb);
 	}
 	return result;
@@ -47,20 +44,20 @@ int mutex_trylock (mutex_ptr this) {
 
 //remove cuurent holding pcb from using_pcb and add it to the done_que.
 //
-int mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
-	int result = 0;
+pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
 	if (this->using_pcb == thispcb && this->mutex_state == 1) {
-		q_enqueue(this->done_que, thispcb);
+		//q_enqueue(this->done_que, thispcb);
 		if (this->waiting_pcbs->node_count > 0) {
 			this->using_pcb = q_dequeue(this->waiting_pcbs);
+      this->using_pcb->state = unblocked;
 		} else {
 			this->using_pcb = NULL;
-			this->mutex_state = 0;
+      this->mutex_state = 0;
 		}
 		//if there is noting in the waiting que then using_pcb is null if there is something
 		//then using_pcb ='s the next item in the waiting que.
 	}
-	return result;
+	return this->using_pcb;
 }
 
 cond_ptr cond_constructor() {
@@ -72,11 +69,9 @@ cond_ptr cond_constructor() {
 }
 
 int cond_wait(cond_ptr this, mutex_ptr this2) {
-	if (this->condition == 0) {
-		mutex_unlock(this2, this2->using_pcb);
-		q_enqueue(this->associated_mutex, this2);
-		q_enqueue(this->waiting_threads, this2->using_pcb);
-	}
+  //mutex_unlock(this2, this2->using_pcb);
+	this->associated_mutex = this2;
+	this->waiting_threads = this2->using_pcb;
 	return 1;
 }
 

@@ -21,7 +21,7 @@ typedef struct mutex_type {
 	int mutex_name;
 	pcb_ptr using_pcb;
 	que_ptr waiting_pcbs;
-	que_ptr done_que;
+	//que_ptr done_que; //may not need this...
 } mutex;
 typedef mutex * mutex_ptr;
 
@@ -48,10 +48,11 @@ int mutex_trylock (mutex_ptr this);
  * RETURN INFO HERE
  */
 int mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
-
+/*For this particular exercise, only one thread
+ *can be waiting for a condition or mutex at a time.*/
 typedef struct cond_type {
-	que_ptr waiting_threads;
-	que_ptr associated_mutex;
+	pcb_ptr waiting_thread;
+	mutex_ptr associated_mutex;
 	int condition;
 } cond;
 typedef cond * cond_ptr;
