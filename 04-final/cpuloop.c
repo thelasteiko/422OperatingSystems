@@ -21,6 +21,7 @@
 int proConVar[10]; //A global variable for each Producer/Consumer pair.
 int oldProConVar[10]; //Producer / 2 = (Consumer - 1) / 2 = array number.
 int mutualVar[20];
+int pairTerminationFlag[20];
 
 int monitor (sch_ptr this) {
   /*Iterates through the ready queue and resets priority
@@ -36,7 +37,15 @@ int monitor (sch_ptr this) {
       pcb_set_priority(temp2);
       n = n - 1;
       //requeue the PCB to the proper priority level
-      pq_enqueue(this->rdyq, temp2);
+      int needToEnqueue = 1;
+      if (temp2->type >= producer && pairTerminationFlag[temp2->pairnumber]) {
+        needToEnqueue = 0;
+        pairTerminationFlag[temp2->pairnumber] = 0;
+        pcb_destructor(temp2);
+      }
+      if (needToEnqueue) {
+        pq_enqueue(this->rdyq, temp2);
+      }
     }
   }
   return 0;
@@ -68,6 +77,9 @@ pcb_ptr term_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current) {
     /*ISR for termination of a process.*/
     current->state = dead;
     current->termination = that->totaltime;
+    if (current->pairnumber > 0) {
+      pairTerminationFlag[current->pairnumber] = 1;
+    }
     return scheduler(this, that, current);
 }
 
@@ -124,7 +136,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
       return scheduler(this, that, current);
 		}
 	} else if (current->type == mutual) {//TODO
-    
+    //the variable is cahnged 
   }
   return current;
 }
