@@ -3,4 +3,5 @@ gcc -Wall -c que.c -o que.o
 gcc -Wall -c pque.c -o pque.o
 gcc -Wall -c cpu.c -o cpu.o
 gcc -Wall -c sch.c -o sch.o
-gcc -Wall pcb.h pcb.o que.h que.o pque.h pque.o cpu.h cpu.o sch.h sch.o cpuloop.c -o cpuloop.exe
+gcc -Wall -c mutex.c -o mutex.o
+gcc -Wall pcb.h pcb.o que.h que.o pque.h pque.o cpu.h cpu.o sch.h sch.o mutex.h mutex.o cpuloop.c -o cpuloop.exe

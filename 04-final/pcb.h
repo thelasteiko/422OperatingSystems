@@ -11,15 +11,18 @@
 #ifndef PCB
 #define PCB
 
-#include "mutex.h"
 #define NUMTRAPS 4
 #define MAXPRI 3
+
 /*Possible states a process can be in. Default is dead.*/
 enum state_type {
+  //0      1          2           3    4       5
   ready, running, interrupted, wait1, wait2, ioready1,
-  ioready2, blocked, unblocked, dead
+  //6         7       8
+  ioready2, blocked, dead
 };
 enum process_type {
+  //0       1     2            3      4
   regular, busy, producer, consumer, mutual
 };
 /*
@@ -49,7 +52,7 @@ typedef struct pcb_type {
     int mtx_lockon[NUMTRAPS]; //the 'name' of the mutexes to lock
     int mtxtime; //if the thread has a lock on something
     int index;
-	//char * name; //used to tell the pairs for the prducer/consumer
+    char * name; //used to tell the pairs for the prducer/consumer
     int pairnumber; // index of shared variable
 } pcb;
 typedef pcb * pcb_ptr;
@@ -63,20 +66,26 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
 int pcb_set_priority (pcb_ptr this);
 /*Returns the priority of the current process.*/
 int pcb_get_priority (pcb_ptr this);
-/*Set the name of the pcb*/
-int pcb_set_name(pcb_ptr this, char * myName);
+
 /*Set the register values for the process.*/
 int pcb_set_io1 (pcb_ptr this, int * io_1_traps);
 /*Get the register values for this process.*/
 int * pcb_get_io1 (pcb_ptr this);
+
 int pcb_set_io2 (pcb_ptr this, int * io_2_traps);
 int * pcb_get_io2 (pcb_ptr this);
+
 int * pcb_get_mtx(pcb_ptr this);
 int pcb_set_mtx(pcb_ptr this, int * mtx);
+
 int * pcb_get_mtxlock(pcb_ptr this);
 int pcb_set_mtxlock(pcb_ptr this, int * mtx);
+
 int pcb_set_marker(pcb_ptr this);
-int pcb_get_mtx_index(pcb_ptr this)
+int pcb_set_name(pcb_ptr this, char * name);
+int pcb_get_mtx_index(pcb_ptr this);
+int pcb_mtx_inter(pcb_ptr this);
+int pcb_reset_pc(pcb_ptr this);
 /*Deallocates the memory dedicated to the current process.*/
 int pcb_destructor(pcb_ptr this);
 /*Returns a pointer to a String representation of the process.*/

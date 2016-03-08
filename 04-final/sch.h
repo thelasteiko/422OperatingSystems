@@ -11,7 +11,6 @@
 #include "que.h"
 #include "cpu.h"
 #include "pque.h"
-#include "list.h"
 #include "mutex.h"
 
 #define MAXREG 50
@@ -26,7 +25,8 @@ typedef struct sch_type {
     que_ptr iowait2;
     que_ptr deadq;
     mutex_ptr mutexes[MAXPAIR+MAXMUTUAL]; //list of mutex that are in use
-    cond_ptr cond_var[MAXPAIR+MAXMUTUAL]; //list of condition variables in use
+    cond_ptr prod_var[MAXPAIR]; //list of condition variables for waiting producers
+    cond_ptr cons_var[MAXPAIR]; //list of condiction variables for waiting consumers
   int numreg;
   int numbusy;
   int numpair;

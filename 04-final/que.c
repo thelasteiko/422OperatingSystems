@@ -82,12 +82,12 @@ char * q_toString(que_ptr this) {
 	if (this->node_count > 0) {
         char * cur = (char *) malloc(sizeof(char) * 5);
         node = this->first_node;
-        sprintf(cur, "P%d-", pcb_get_pid(node -> my_pcb));
+        sprintf(cur, "P%d-", node -> my_pcb->pid);
         strcat(str, cur);
 		node = node -> next_node;
 		while(node) {
             strcat(str, ">");
-            sprintf(cur, "P%d-", pcb_get_pid(node -> my_pcb));
+            sprintf(cur, "P%d-", node -> my_pcb->pid);
             strcat(str, cur);
 			node = node->next_node;
         }

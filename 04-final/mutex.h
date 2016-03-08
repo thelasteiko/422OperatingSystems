@@ -47,7 +47,7 @@ int mutex_trylock (mutex_ptr this);
  * Unlocks the given mutex. The mutex is assumed to be locked and owned by the calling thread when mutex_unlock is called.
  * RETURN INFO HERE
  */
-int mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
+pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
 /*For this particular exercise, only one thread
  *can be waiting for a condition or mutex at a time.*/
 typedef struct cond_type {
@@ -68,7 +68,7 @@ int cond_wait(cond_ptr this, mutex_ptr this2);
  * Unblocks at least one of the threads that are blocked on the specified
  * condition variable this (if any threads are blocked on this).
  */
-int cond_signal(cond_ptr this);
+pcb_ptr cond_signal(cond_ptr this);
 
 
 #endif /* MUTEX */

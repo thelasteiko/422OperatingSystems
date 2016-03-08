@@ -8,10 +8,10 @@
 *     Header file for Que.
 */
 
-#include "pcb.h"
-
 #ifndef MY_QUE
 #define MY_QUE
+
+#include "pcb.h"
 
 typedef struct node_type {
 	struct pcb_type * my_pcb;

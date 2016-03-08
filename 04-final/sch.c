@@ -24,41 +24,7 @@ int iop = 0;
 
 int random1(int min, int max) {
     /*Creates a random number, yay.*/
-    time_t seed;
-    seed = time(NULL);
-    srand((unsigned int)seed);
     return (rand() % (max-min)) + min;
-}
-
-// checks to see whether it is a producer or consumer and then does something.
-// returns zero if able to do operations, 1 if producer needs to wait for consumer,
-// 2 if needs o wait for the producer.
-int producerConsumer(pcb_ptr this) {
-  //TODO put into handler in cpuloop
-	int num = this->pairnumber;
-	int gtg = 0;
-
-	if (this->type == producer) {
-		if (proConVar[num] == oldProConVar[num]) {
-			proConVar[num]++;
-			printf(this->name);
-			printf(" changes value from %d to %d.\n", oldProConVar[num], proConStart[num]);
-		}
-		else {
-			gtg = 1;
-		}
-	}
-	else {
-		if (proConVar[num] > oldProConVar[num]) {
-			printf(this->name);
-			printf(" reads in value of %d.\n", proConStart[num]);
-			oldProConVar[num]++;
-		}
-		else {
-			gtg = 2;
-		}
-	}
-	return gtg;
 }
 
 sch_ptr sch_constructor () {
@@ -70,6 +36,8 @@ sch_ptr sch_constructor () {
     sched->iowait1 = que_constructor();
     sched->iowait2 = que_constructor();
     sched->deadq = que_constructor();
+    //sched->mutexes = (mutex_ptr) malloc(sizeof(mutex_ptr)*MAXPAIR+MAXMUTUAL);
+    //sched->prod_var = (cond_ptr) malloc(sizeof(cond_ptr)
     sched->numreg = 0;
     sched->numbusy = 0;
     sched->numpair = 0;
@@ -77,19 +45,11 @@ sch_ptr sch_constructor () {
     return sched;
 }
 
-pcb_ptr sch_init(sch_ptr this, cpu_ptr that, unsigned int * pid) {
-    *pid = sch_enqueue(this, that, *pid);
-    sch_ready(this);
-    pcb_ptr current = pq_dequeue(this->rdyq);
-    pseudostack = current->pc;
-    that->pc = pseudostack;
-    return current;
-}
-int * create_list (int min, int max) {
+int * create_list (int min, int max, int * list) {
   /* Create a unique set of NUMTRAPS integers
    * based on the range given. */
   unsigned int last, i, next, k;
-  int list[NUMTRAPS];
+  //int list[NUMTRAPS];
   last = min;
   k = max / 10;
   next = k;
@@ -106,20 +66,24 @@ pcb_ptr make_regular (unsigned int pid, long rawTime, int pri,
   int mpc, int t2) {
   pcb_ptr this = pcb_constructor();
   //,pid, pri, state, type, pc, maxpc, cre, term, io1, io2
-  int io1[NUMTRAPS] = create_list(0, mpc);
-  int io2[NUMTRAPS] = create_list(io1[NUMTRAPS-1], mpc);
+  int * list = (int *) malloc(sizeof(int)*NUMTRAPS);
   pcb_initialize(this, pid, pri, ready, regular,
     mpc, rawTime, t2);
-  pcb_set_io1(this, io1);
-  pcb_set_io2(this, io2);
+  create_list(0, mpc, list);
+  pcb_set_io1(this, list);
+  create_list(list[NUMTRAPS-1], mpc, list);
+  pcb_set_io2(this, list);
+  return this;
 }
 pcb_ptr make_busy (unsigned int pid, long rawTime, int pri,
   int mpc, int t2) {
+  pcb_ptr this = pcb_constructor();
   pcb_initialize(this, pid, pri, ready, busy,
     mpc, rawTime, t2);
+  return this;
 }
 pcb_ptr make_producer (unsigned int pid, long rawTime, int pri,
-  int mpc, int t2) {
+  int mpc, int t2, int numpair) {
   //When determing where to lock, have it lock between IO
   //for a time before the next IO
   pcb_ptr this = pcb_constructor();
@@ -133,6 +97,11 @@ pcb_ptr make_producer (unsigned int pid, long rawTime, int pri,
   pcb_set_io1(this, io1);
   pcb_set_io2(this, io2);
   pcb_set_mtx(this, mtx);
+  pcb_set_mtxlock(this, mtxlock);
+  //producer: 00 ---> 12 chars
+  char * name = (char *) malloc(sizeof(char) * 12);
+  sprintf(name, "Producer: %d", this->pairnumber);
+  pcb_set_name(this, name);
   return this;
 }
 pcb_ptr make_consumer (pcb_ptr prod, unsigned int pid, long rawTime,
@@ -143,11 +112,16 @@ pcb_ptr make_consumer (pcb_ptr prod, unsigned int pid, long rawTime,
   pcb_set_io1(this, prod->IO_1_TRAPS);
   pcb_set_io2(this, prod->IO_2_TRAPS);
   pcb_set_mtx(this, prod->mtx);
-  this->pairnumber = numpair;
+  pcb_set_mtxlock(this, prod->mtx_lockon);
+  this->pairnumber = prod->pairnumber;
+  //consumer: 00 ---> 12 chars
+  char * name = (char *) malloc(sizeof(char) * 12);
+  sprintf(name, "Consumer: %d", this->pairnumber);
+  pcb_set_name(this, name);
   return this;
 }
 pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
-  int mpc, int t2) {
+  int mpc, int t2, int nummutual) {
   //Mutual should be using the same mtx list but
   //it locks two mutex instead of one
   pcb_ptr this = pcb_constructor();
@@ -161,7 +135,7 @@ pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
   pcb_set_io1(this, io1);
   pcb_set_io2(this, io2);
   pcb_set_mtx(this, mtx);
-  pcb_set_mtx_lockon(this, mtxlock);
+  pcb_set_mtxlock(this, mtxlock);
   this->pairnumber = nummutual;
   return this;
 }
@@ -180,20 +154,26 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
   int t2 = random1(2, 15);
   //types: regular, busy, producer, consumer, mutual resource
   prob = random1(1, 100);
-  if (prob <= 40 && this->numbusy < MAXBUSY) {
-    q_enqueue(this->enq, make_busy(pid, that->totaltime, 0));
+  if (pri == 0 && this->numbusy < MAXBUSY) {
+    q_enqueue(this->enq, make_busy(pid, that->totaltime,
+      pri, mpc, t2));
     pid = pid + 1;
     this->numbusy = this->numbusy + 1;
-  } else if (prob <= 75) {
-    if (this->numpair < MAXPAIR) { //TODO need to add the mutex or variable
-      q_enqueue(this->enq, make_producer(pid, that->totaltime, pri, mpc, t2));
+  } else if (prob <= 40) {
+    if (this->numpair < MAXPAIR) {
+      pcb_ptr prod = make_producer(pid, that->totaltime,
+        pri, mpc, t2, this->numpair);
       pid = pid + 1;
-      q_enqueue(this->enq, make_consumer(pid, that->totaltime, pri, mpc, t2));
+      pcb_ptr cons = make_consumer(prod, pid,
+        that->totaltime, pri, mpc, t2);
       pid = pid + 1;
+      q_enqueue(this->enq, prod);
+      q_enqueue(this->enq, cons);
       mutex_ptr m = mutex_constructor(this->numpair);
+      //printf("Mtx: %p\n", this->mutexes);
       this->mutexes[this->numpair] = m;
       this->numpair = this->numpair + 1;
-    } else if (this->nummutual < MAXMUTUAL) {
+    } /*else if (this->nummutual < MAXMUTUAL) {
       q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
       pid = pid + 1;
       q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
@@ -201,7 +181,7 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
       mutex_ptr m = mutex_constructor(this->nummutual);
       this->mutexes[this->nummutual] = m;
       this->nummutual = this->nummutual + 1;
-    }
+    }*/
   } else if (this->numreg < MAXREG) {
     q_enqueue(this->enq, make_regular(pid, that->totaltime, pri, mpc, t2));
     pid = pid + 1;
@@ -212,8 +192,10 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
 int sch_enqueue(sch_ptr this, cpu_ptr that, unsigned int pid) {
     /*Initialize some PCBs to be run.*/
     unsigned int i = random1(1, 5);
-    unsigned int p = pid
-    while(i < (pid-p)) {
+    //printf("Making: %d\n", i);
+    while(i) {
+        //printf("Index: %d\n", i);
+        //printf("Diff: %d\n", p-pid);
         pid = make_pcb(this, that, pid);
         i = i - 1;
     }
@@ -226,22 +208,26 @@ int sch_ready (sch_ptr this) {
         pcb_ptr node = q_dequeue(this->enq);
         printf("Process has been enqueued --> PCB Contents: %s\r\n", pcb_toString(node));
         pq_enqueue(this->rdyq, node);
-    }
-    return 0;
+  }
+  return 0;
 }
-
+pcb_ptr sch_init(sch_ptr this, cpu_ptr that, unsigned int * pid) {
+    time_t seed;
+    seed = time(NULL);
+    srand((unsigned int)seed);
+    *pid = sch_enqueue(this, that, *pid);
+    //printf("After enqueue.");
+    sch_ready(this);
+    //printf("After ready.");
+    pcb_ptr current = pq_dequeue(this->rdyq);
+    pseudostack = current->pc;
+    that->pc = pseudostack;
+    return current;
+}
 pcb_ptr idle_process () {
     /*An idle process to keep the CPU busy.*/
     pcb_ptr idle = pcb_constructor();
-    int io1[NUMTRAPS];
-    int io2[NUMTRAPS];
-    int i;
-    for (i = 0; i < NUMTRAPS; i = i + 1) {
-        io1[i] = -1;
-        io2[i] = -1;
-    }
-    pcb_initialize(idle,-1,MAXPRI, running, 0, 10,
-        0, 1, io1, io2);
+    pcb_initialize(idle,-1,MAXPRI, running, busy, 1, 0, 1);
     return idle;
 }
 
@@ -270,7 +256,7 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
     pseudostack = next->pc;
     if (cntx2 >= 3) {
 		printf("Switching to: %s\r\n", pcb_toString(next));
-		printf("%s\r\n\r\n", q_toString(from));
+		printf("\r\n%s\r\n\r\n", q_toString(from));
 		cntx2 = 0;
 	} else if (cntx2 <= 3) {
 		cntx2 = cntx2 + 1;
@@ -284,11 +270,19 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pseudostack = that->pc;
     enum state_type inter = current->state;
     //printf("%s\n", pq_toString(this->rdyq));
-    printf("\r\nSwitching...\r\n");
+    printf("Switching...%d : %d\r\n\r\n", current->state, current->type);
     int pri = pcb_get_priority(current);
     que_ptr from = pq_minpri(this->rdyq);
     que_ptr to = this->rdyq->priorityQue[pri];
     switch(inter) {
+        case running:
+        next = current;
+        break;
+        
+        case ready:
+        pq_enqueue(this->rdyq, current);
+        break;
+        
         case interrupted:
         current->state = ready;
         if (from->node_count <= 0)
@@ -327,16 +321,13 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         next = current;
         break;
         
-        case blocked:
+        //means it's in a mutex q
+        //don't need to enqueue, just get next
+        case blocked: //TODO send the mutex list to dispatcher
         current->pc = pseudostack;
         next = pq_dequeue(this->rdyq);
         next->state = running;
         pseudostack = next->pc;
-        break;
-        
-        case unblocked:
-        current->state = ready;
-        pq_enqueue(this->rdyq, current);
         break;
         
         case dead:
@@ -348,12 +339,12 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
           case busy:
           this->numbusy = this->numbusy - 1;
           break;
-          case producer:
           break;
           case consumer:
           this->numpair = this->numpair-1;
           break;
           case mutual:
+          this->nummutual = this->nummutual-1;
           break;
         }
         next = dispatcher(this->deadq, from, current);
