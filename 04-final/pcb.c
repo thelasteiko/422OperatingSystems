@@ -228,6 +228,7 @@ char * pcb_toString(pcb_ptr this) {
     pri = pcb_get_priority(this);
     id = this->pid;
     st = this->state;
+    int ty = this->type;
     pc = this->pc;
     mpc = this->max_pc;
     cre = this->creation;
@@ -235,10 +236,10 @@ char * pcb_toString(pcb_ptr this) {
     t2 = this->terminate;
     tc = this->termcount;
     
-    sprintf(str, "PRI: %d, PID: %d, STATE: %d, PC: %d, "
+    sprintf(str, "PRI: %d, PID: %d, STATE: %d, TYPE: %d, PC: %d, "
             "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
-        pri, id, st, pc, mpc, cre, t1, t2, tc,
+        pri, id, st, ty, pc, mpc, cre, t1, t2, tc,
         this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
         this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3]
         );

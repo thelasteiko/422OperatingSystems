@@ -51,7 +51,7 @@ pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
 /*For this particular exercise, only one thread
  *can be waiting for a condition or mutex at a time.*/
 typedef struct cond_type {
-	pcb_ptr waiting_thread;
+	que_ptr waiting_thread;
 	mutex_ptr associated_mutex;
 	int condition;
 } cond;

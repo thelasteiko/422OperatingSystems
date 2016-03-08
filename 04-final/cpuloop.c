@@ -83,7 +83,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 	int num = pcb_get_mtx_index(current);
   if (num < 0) return current; //not a mutex type
   mutex_ptr m = this->mutexes[num];
-  if (!m || m->using_pcb != current)
+  if (!m)
     return current; //not the right thread
 	if (current->type == producer) {
 		if (proConVar[num] <= oldProConVar[num]) {
@@ -101,7 +101,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
       if (!this->prod_var[num])
         this->prod_var[num] = cond_constructor();
       cond_wait(this->prod_var[num], m);
-      current->state = blocked;
+      current->state = prodwait;
       //current is blocked until signaled
       //return the next pcb that is ready
       return scheduler(this, that, current);
@@ -120,7 +120,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 			if (!this->cons_var[num])
         this->cons_var[num] = cond_constructor();
       cond_wait(this->cons_var[num], m);
-      current->state = blocked;
+      current->state = conswait;
       return scheduler(this, that, current);
 		}
 	} else if (current->type == mutual) {//TODO
@@ -151,12 +151,11 @@ pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 10000; //This is how long it runs
+    int run = 100; //This is how long it runs
     unsigned int pid = random1(0, 200);
     //This is how many PCBs will be made.
-    unsigned int maxpid = pid + 30;
+    unsigned int maxpid = pid + 50;
     pcb_ptr current = sch_init(this, that, &pid);
-    printf("After current.\n");
     printf("Process created: PID %d at %d\r\n", pid, that->totaltime);
     while (run) {
         //printf("Time: %d\r\nT1IO: %d\r\nT2IO: %d\r\n",
@@ -166,13 +165,16 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         that->totaltime = that->totaltime + 1;
         //Add PCBs if there are fewer than the max.
         if(pid < maxpid) {
-           pid = sch_enqueue(this, that, pid);
-           sch_ready(this);
+          printf("Loading PCBs.\r\n");
+          pid = sch_enqueue(this, that, pid);
+          printf("Ready...\r\n");
+          sch_ready(this);
         }
         //Update the priorities to prevent starvation.
-        if (run % 500 == 0)
+        if (run % 50 == 0) {
           monitor(this);
-        //printf("%s\r\n", pq_toString(this->rdyq));
+          printf("%s\r\n", pq_toString(this->rdyq));
+        }
         //Increment the PCB.
         that->pc = that->pc + 1;
         //STEP 1 ----------------------------------------------

@@ -18,8 +18,8 @@
 enum state_type {
   //0      1          2           3    4       5
   ready, running, interrupted, wait1, wait2, ioready1,
-  //6         7       8
-  ioready2, blocked, dead
+  //6         7       8         9         10
+  ioready2, blocked, prodwait, conswait, dead
 };
 enum process_type {
   //0       1     2            3      4

@@ -39,7 +39,7 @@ int mutex_lock (mutex_ptr this, pcb_ptr thispcb) {
 		this->mutex_state = 1;
 	} else {
 		thispcb->state = blocked;
-		q_enqueue(this->waiting_pcbs, thispcb);
+		//q_enqueue(this->waiting_pcbs, thispcb);
 	}
 	return result;
 }
@@ -69,14 +69,15 @@ pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
 cond_ptr cond_constructor() {
 	cond_ptr con = (cond_ptr) malloc (sizeof(cond));
 	con->associated_mutex = NULL;
-	con->waiting_thread = NULL;
+	con->waiting_thread = que_constructor();
 	con->condition = 0;
 	return con;
 }
 
 int cond_wait(cond_ptr this, mutex_ptr this2) {
 	this->associated_mutex = this2;
-	this->waiting_thread = this2->using_pcb;
+  //TODO send to dispatcher?
+	//this->waiting_thread = this2->using_pcb;
   mutex_unlock(this2, this2->using_pcb);
   this->condition = 1;
 	return 1;

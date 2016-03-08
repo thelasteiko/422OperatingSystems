@@ -146,7 +146,7 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
    * call the appropriate making method.*/
   int pri = -1;
   int prob = random1(1, 100);
-  if (prob <= 5) pri = 0;
+  if (prob <= 20) pri = 0;
   else if (prob <= 85) pri = 1;
   else if (prob <= 95) pri = 2;
   else pri = 3;
@@ -159,8 +159,7 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
       pri, mpc, t2));
     pid = pid + 1;
     this->numbusy = this->numbusy + 1;
-  } else if (prob <= 40) {
-    if (this->numpair < MAXPAIR) {
+  } else if (prob <= 20 && this->numpair < MAXPAIR) {
       pcb_ptr prod = make_producer(pid, that->totaltime,
         pri, mpc, t2, this->numpair);
       pid = pid + 1;
@@ -170,18 +169,19 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
       q_enqueue(this->enq, prod);
       q_enqueue(this->enq, cons);
       mutex_ptr m = mutex_constructor(this->numpair);
-      //printf("Mtx: %p\n", this->mutexes);
+      //printf("Mtx: %p\n", this->mutexes[this->numpair]);
       this->mutexes[this->numpair] = m;
       this->numpair = this->numpair + 1;
-    } /*else if (this->nummutual < MAXMUTUAL) {
-      q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
+  } else if (prob <= 40 && this->nummutual < MAXPAIR+MAXMUTUAL) {
+      q_enqueue(this->enq, make_mutual(pid, that->totaltime,
+        pri, mpc, t2, this->nummutual));
       pid = pid + 1;
-      q_enqueue(this->enq, make_mutual(pid, that->totaltime, pri, mpc, t2));
+      q_enqueue(this->enq, make_mutual(pid, that->totaltime,
+        pri, mpc, t2, this->nummutual));
       pid = pid + 1;
       mutex_ptr m = mutex_constructor(this->nummutual);
       this->mutexes[this->nummutual] = m;
       this->nummutual = this->nummutual + 1;
-    }*/
   } else if (this->numreg < MAXREG) {
     q_enqueue(this->enq, make_regular(pid, that->totaltime, pri, mpc, t2));
     pid = pid + 1;
@@ -256,7 +256,7 @@ pcb_ptr dispatcher(que_ptr to, que_ptr from, pcb_ptr current) {
     pseudostack = next->pc;
     if (cntx2 >= 3) {
 		printf("Switching to: %s\r\n", pcb_toString(next));
-		printf("\r\n%s\r\n\r\n", q_toString(from));
+		printf("%s\r\n\r\n", q_toString(from));
 		cntx2 = 0;
 	} else if (cntx2 <= 3) {
 		cntx2 = cntx2 + 1;
@@ -270,7 +270,7 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pseudostack = that->pc;
     enum state_type inter = current->state;
     //printf("%s\n", pq_toString(this->rdyq));
-    printf("Switching...%d : %d\r\n\r\n", current->state, current->type);
+    printf("Switching...%d : %d\r\n", current->state, current->type);
     int pri = pcb_get_priority(current);
     que_ptr from = pq_minpri(this->rdyq);
     que_ptr to = this->rdyq->priorityQue[pri];
@@ -321,13 +321,26 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         next = current;
         break;
         
-        //means it's in a mutex q
-        //don't need to enqueue, just get next
-        case blocked: //TODO send the mutex list to dispatcher
-        current->pc = pseudostack;
-        next = pq_dequeue(this->rdyq);
+        //enqueue to mutex list
+        case blocked:
+        next = dispatcher( //send the mutex list to dispatcher
+          this->mutexes[pcb_get_mtx_index(current)]->waiting_pcbs,
+          from, current);
         next->state = running;
-        pseudostack = next->pc;
+        break;
+        
+        case prodwait:
+        next = dispatcher(
+          this->prod_var[pcb_get_mtx_index(current)]->waiting_thread,
+          from, current);
+        next-> state = running;
+        break;
+        
+        case conswait:
+        next = dispatcher(
+          this->cons_var[pcb_get_mtx_index(current)]->waiting_thread,
+          from, current);
+        next->state = running;
         break;
         
         case dead:
@@ -352,7 +365,10 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         //pseudostack = next->pc;
         break;
     }
-    if (next) pcb_set_marker(next);
+    if (next) {
+      pcb_set_marker(next);
+      printf("PID: %d\r\n", next->pid);
+    }
     that->pc = pseudostack;
     return next;
 }
