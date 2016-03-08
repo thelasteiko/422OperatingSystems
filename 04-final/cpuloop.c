@@ -151,7 +151,7 @@ pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 100; //This is how long it runs
+    int run = 10000; //This is how long it runs
     unsigned int pid = random1(0, 200);
     //This is how many PCBs will be made.
     unsigned int maxpid = pid + 50;
@@ -171,7 +171,7 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
           sch_ready(this);
         }
         //Update the priorities to prevent starvation.
-        if (run % 50 == 0) {
+        if (run % 500 == 0) {
           monitor(this);
           printf("%s\r\n", pq_toString(this->rdyq));
         }

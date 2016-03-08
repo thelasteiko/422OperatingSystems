@@ -86,11 +86,13 @@ int cond_wait(cond_ptr this, mutex_ptr this2) {
 pcb_ptr cond_signal(cond_ptr this) {
   pcb_ptr next = NULL;
 	if (this->condition == 1) {
-		this->waiting_thread->state = ready;
+    next = q_dequeue(this->waiting_thread);
+    next->state = ready;
+		//this->waiting_thread->state = ready;
     //mutex should be unlocked by caller...
-    next = this->waiting_thread;
+    //next = this->waiting_thread;
     this->condition = 0;
-    this->waiting_thread = NULL;
+    //this->waiting_thread = NULL;
 	}
 	return next;
 }
