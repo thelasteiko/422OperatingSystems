@@ -49,7 +49,8 @@ int mutex_trylock (mutex_ptr this) {
 }
 
 //remove cuurent holding pcb from using_pcb and add it to the done_que.
-//
+//The mutex queue is only a halfway point between running and ready q.
+//It should have the PC already saved in it.
 pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb) {
 	if (this->using_pcb == thispcb && this->mutex_state == 1) {
 		//q_enqueue(this->done_que, thispcb);

@@ -2,7 +2,7 @@
  *
  *  Created on: January 21 2016
  *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
- *     Version: February 4 2016
+ *     Version: March 8 2016
  *
  *      Has a loop to simulate a CPU. The main loop is in
  *      cpu_loop. The other methods are to handle ISR
@@ -83,8 +83,9 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 	int num = pcb_get_mtx_index(current);
   if (num < 0) return current; //not a mutex type
   mutex_ptr m = this->mutexes[num];
-  if (!m)
+  if (!m || m->using_pcb != current)
     return current; //not the right thread
+  printf("Has mtx: PID %d at %d\r\n", current->pid, that->totaltime);
 	if (current->type == producer) {
 		if (proConVar[num] <= oldProConVar[num]) {
 			proConVar[num]++;
@@ -93,7 +94,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
       //notify any waiting consumers
       cond_ptr c = this->cons_var[num];
       //put into rdyq if there are waiting
-      if (c && c->waiting_thread)
+      if (c && c->waiting_thread->node_count > 0)
         scheduler(this, that, cond_signal(c));
       
 		} else {
@@ -114,7 +115,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 			oldProConVar[num]++;
       //notify waiting producers
       cond_ptr c = this->prod_var[num];
-      if (c && c->waiting_thread)
+      if (c && c->waiting_thread->node_count > 0)
         scheduler(this, that, cond_signal(c));
 		} else {
 			if (!this->cons_var[num])
@@ -130,16 +131,24 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 }
 pcb_ptr mtx_free_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
   /*The current pcb has stopped using it's mutex and can release it.*/
-  int num = pcb_get_mtx_index(current);
-  if (num < 0) return current;
+  printf("This MTX PCB: %s\r\n", pcb_toString(current));
+	int num = pcb_get_mtx_index(current);
+  if (num < 0) return current; //not a mutex type
+  mutex_ptr m = this->mutexes[num];
+  if (!m || m->using_pcb != current)
+    return current; //not the right thread
   pcb_ptr next = mutex_unlock(this->mutexes[num], current);
+  printf("Next MTX: %p\r\n", next);
   //put next thread awaiting this mutex in rdyq
-  if (next)
+  if (next) {
+    printf("Next MTX PCB: %s\r\n", pcb_toString(next));
     scheduler(this, that, next);
+  }
   return current;
 }
 
 pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
+  printf("This MTX PCB: %s\r\n", pcb_toString(current));
   int num = pcb_get_mtx_index(current);
   if (num < 0) return current;
   if (!mutex_lock(this->mutexes[num], current))
@@ -151,10 +160,10 @@ pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 10000; //This is how long it runs
+    int run = 50000; //This is how long it runs
     unsigned int pid = random1(0, 200);
     //This is how many PCBs will be made.
-    unsigned int maxpid = pid + 50;
+    unsigned int maxpid = pid + 30;
     pcb_ptr current = sch_init(this, that, &pid);
     printf("Process created: PID %d at %d\r\n", pid, that->totaltime);
     while (run) {
@@ -171,18 +180,19 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
           sch_ready(this);
         }
         //Update the priorities to prevent starvation.
-        if (run % 500 == 0) {
+        if (run % 50 == 0) {
           monitor(this);
-          printf("%s\r\n", pq_toString(this->rdyq));
+          //printf("%s\r\n", pq_toString(this->rdyq));
         }
-        //Increment the PCB.
-        that->pc = that->pc + 1;
         //STEP 1 ----------------------------------------------
         //Check for timer interrupt.
-        if(time_inter(that)) { //pcb pc doesn't change until changed out
+        if(time_inter(that)) {
+            //pcb pc doesn't change until changed out
             printf("Timer interrupt: PID %d at %d\r\n", current->pid, that->totaltime);
             current = time_inter_handle(this, that, current);
         }
+        //if (current->pid < 0)
+          //current = time_inter_handle(this, that, current);
         //STEP 2 ----------------------------------------------
         //If the current PCB pc value is at the max
         //reset the PCB pc and increase the termination count.
@@ -197,37 +207,43 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         //STEP 4 ----------------------------------------------
         //Check for IO completion.
         if (io_1_inter(that, this->iowait1->node_count)) {
-            printf("IO 1 Complete: PID %d at %d\r\n", q_peek(this->iowait1)->pid, that->totaltime);
+            printf("IO 1 Complete: PID %d at %d\r\n", q_peek(this->iowait1)->pid,
+              that->totaltime);
             current = io_inter_handle(this, that, current, ioready1);
         }
         if (io_2_inter(that, this->iowait2->node_count)) {
-            printf("IO 2 Complete: PID %d at %d\r\n", q_peek(this->iowait2)->pid, that->totaltime);
+            printf("IO 2 Complete: PID %d at %d\r\n", q_peek(this->iowait2)->pid,
+              that->totaltime);
             current = io_inter_handle(this, that, current, ioready2);
         }
         //STEP 6 ----------------------------------------------
         if (current->type >= producer) {
-          if (pcb_mtx_inter(current)) //unlock the mutex
+          if (pcb_mtx_inter(current, that->pc)) {//unlock the mutex
+            printf("Free mtx: PID %d at %d\r\n", current->pid, that->totaltime);
             current = mtx_free_handle(this, that, current);
-          else //increase shared var
+          } else {//increase shared var
             current = mtx_handle(this, that, current);
+          }
         }
+        //Increment the PC.
+        that->pc = that->pc + 1;
         //Check for IO Traps.
         int i; //put mutex lock handler in this loop
         for (i = 0; i < NUMTRAPS; i = i + 1) {
           //STEP 5 --------------------------------------------
             if (current->IO_1_TRAPS[i] == that->pc) {
-                printf("IO 1 Trap: PID %d at %d\r\n", current->pid, that->totaltime);
+                printf("IO 1 Trap: PID %d at %d\r\n", current->pid, that->pc);
                 current = io_trap_handle(this, that, current, wait1);
                 break;
             }
             if (current->IO_2_TRAPS[i] == that->pc) {
-              printf("IO 2 Trap: PID %d at %d\r\n", current->pid, that->totaltime);
+              printf("IO 2 Trap: PID %d at %d\r\n", current->pid, that->pc);
                 current = io_trap_handle(this, that, current, wait2);
                 break;
             }
             //STEP 7 ------------------------------------------
             if (current->mtx[i] == that->pc) {
-              printf("Mutex Lock: PID %d at %d\r\n", current->pid, that->totaltime);
+              printf("Mutex Lock: PID %d at %d\r\n", current->pid, that->pc);
               current = mtx_lock_handle(this, that, current);
             }
         }

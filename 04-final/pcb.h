@@ -84,7 +84,7 @@ int pcb_set_mtxlock(pcb_ptr this, int * mtx);
 int pcb_set_marker(pcb_ptr this);
 int pcb_set_name(pcb_ptr this, char * name);
 int pcb_get_mtx_index(pcb_ptr this);
-int pcb_mtx_inter(pcb_ptr this);
+int pcb_mtx_inter(pcb_ptr this, int pc);
 int pcb_reset_pc(pcb_ptr this);
 /*Deallocates the memory dedicated to the current process.*/
 int pcb_destructor(pcb_ptr this);

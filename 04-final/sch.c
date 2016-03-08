@@ -1,9 +1,14 @@
-/*
- * Move the scheduler to a different class
- * for clarity. The dispatcher, scheduler and
- * queues should be here. dispat
- */
 
+/* sch.c
+ *
+ *  Created on: February 21 2016
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
+ *     Version: March 8 2016
+ *
+ *      The scheduler has many methods for making PCBs of
+ *      various types. The type of PCB created is dependent on
+ *      probability.
+ */
 #include "pcb.h"
 #include "que.h"
 #include "pque.h"
@@ -128,8 +133,9 @@ pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
   int io1[NUMTRAPS] = {10, 50, 100, 200};
   int io2[NUMTRAPS] = {30, 70, 150, 300};
   //each mtx lock it locks 0 and 1
-  int mtx[NUMTRAPS] = {35, 75, 155, 305};
-  int mtxlock[NUMTRAPS] = {nummutual, nummutual+1, nummutual, nummutual+1}; //mutex list
+  int mtx[NUMTRAPS] = {35, 75, 180, 305};
+  int mynum = nummutual - MAXPAIR;
+  int mtxlock[NUMTRAPS] = {mynum, mynum+1, mynum, mynum+1}; //mutex list
   pcb_initialize(this, pid, pri, ready, mutual, mpc,
     rawTime, t2);
   pcb_set_io1(this, io1);
@@ -271,6 +277,7 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     enum state_type inter = current->state;
     //printf("%s\n", pq_toString(this->rdyq));
     printf("Switching...%d : %d\r\n", current->state, current->type);
+    printf("PID: %d, PC: %d\r\n", current->pid, current->pc);
     int pri = pcb_get_priority(current);
     que_ptr from = pq_minpri(this->rdyq);
     que_ptr to = this->rdyq->priorityQue[pri];
@@ -367,7 +374,7 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     }
     if (next) {
       pcb_set_marker(next);
-      printf("PID: %d\r\n", next->pid);
+      printf("PID: %d, PC: %d\r\n", next->pid, next->pc);
     }
     that->pc = pseudostack;
     return next;

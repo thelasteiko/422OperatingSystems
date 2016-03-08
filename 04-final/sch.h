@@ -1,9 +1,13 @@
-/*
- * Move the scheduler to a different class
- * for clarity. The dispatcher, scheduler and
- * queues should be here.
- */
 
+/* sch.h
+ *
+ *  Created on: February 21 2016
+ *      Author: Melinda Robertson, Chetayana, Jason Hall, Shewangizaw Gebremariam
+ *     Version: March 8 2016
+ *
+ *      Scheduler definition; the scheduler creates PCBs, manages
+ *      dispatch events and process termination.
+ */
 #ifndef SCH
 #define SCH
 

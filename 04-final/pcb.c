@@ -20,9 +20,10 @@ int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
     return error_code;
 }
-int min(int a, int b) {
-  if (a <= b) return a;
-  else return b;
+int min(int a, int b, int c) {
+  if (a <= b && a <= c) return a;
+  if (b <= a && b <= c) return b;
+  else return c;
 }
 int pcb_set_original(pcb_ptr this, int priority) {
   this->origpri = priority;
@@ -44,8 +45,8 @@ pcb_ptr pcb_constructor() {
     p->terminate = 0;
     p->termcount = 0;
     p->pridown = 0;
-    p->marker = 0;
-    p->oldmarker = -1;
+    p->marker = -1;
+    p->oldmarker = 0;
     p->name = NULL;
     p->pairnumber = -1;
     p->mtxtime = 0;
@@ -76,13 +77,15 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
 int pcb_set_priority (pcb_ptr this) {
   if (this->marker < this->oldmarker) {
     if (this->pridown == 0) {
-      if (this->priority >= 0)
+      if (this->priority > 0)
         this->priority = this->priority - 1;
+      this->pridown = (this->origpri * MAXTIME) + MAXTIME;
     } else
       this->pridown = this->pridown - 1;
   } else {
     this->priority = this->origpri;
     this->oldmarker = this->marker;
+    this->pridown = (this->origpri * MAXTIME) + MAXTIME;
   }
   //this->pridown = (this->origpri * MAXTIME) + MAXTIME;
   return 0;
@@ -153,9 +156,9 @@ int pcb_set_mtxlock (pcb_ptr this, int * mtx) {
 		this->mtx_lockon[i] = mtx[i];
 	}
   this->index = 0;
-  this->mtxtime = mtx[0] - 1 + (min(
-    this->IO_1_TRAPS[1], this->IO_2_TRAPS[1])
-    - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0]));
+  this->mtxtime = mtx[0] - 5 + (min(
+    this->IO_1_TRAPS[1], this->IO_2_TRAPS[1], this->mtx[1])
+    - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0], this->mtx[0]));
   return 0;
 }
 
@@ -177,21 +180,30 @@ int pcb_get_mtx_index(pcb_ptr this) {
   if (this->index < 0) return -1;
   else return this->mtx_lockon[this->index];
 }
-
-int pcb_mtx_inter (pcb_ptr this) {
+//TODO just check against minimum of the three arrays
+//if the current pc value is less than or equal to
+//return 1
+int pcb_mtx_inter (pcb_ptr this, int pc) {
   /* Checking if the current is in mtx lock,
    * if so count down until mtx is released.*/
   if(this->index < 0 || this->index >= NUMTRAPS)
     return 0;
-  if (this->mtxtime == 0) {
+  if (this->mtx[this->index] <= pc && this->mtxtime <= 0) {
+  /*if (this->mtxtime == 0) {*/
     this->index = this->index + 1;
     if (this->index < 3)
-      this->mtxtime = this->mtx[this->index] - 1 + (min(
-        this->IO_1_TRAPS[this->index+1], this->IO_2_TRAPS[this->index+1])
-        - min(this->IO_1_TRAPS[this->index], this->IO_2_TRAPS[this->index]));
+      this->mtxtime = this->mtx[this->index] - 5 + (min(
+        this->IO_1_TRAPS[this->index+1],
+        this->IO_2_TRAPS[this->index+1],
+        this->mtx[this->index+1])
+        - min(this->IO_1_TRAPS[this->index],
+        this->IO_2_TRAPS[this->index],
+        this->mtx[this->index]));
     else if (this->index == 3)
-      this->mtxtime = this->mtx[this->index] - 1 + (this->max_pc
-        - min(this->IO_1_TRAPS[this->index], this->IO_2_TRAPS[this->index]));
+      this->mtxtime = this->mtx[this->index] - 5 + (this->max_pc
+        - min(this->IO_1_TRAPS[this->index],
+        this->IO_2_TRAPS[this->index],
+        this->mtx[this->index]));
     return 1;
   } else
     this->mtxtime = this->mtxtime - 1;
@@ -203,9 +215,9 @@ int pcb_reset_pc(pcb_ptr this) {
     this->termcount = this->termcount + 1;
     if (this->index > 0) {
       this->index = 0;
-      this->mtxtime = this->mtx[0] - 1 + (min(
-        this->IO_1_TRAPS[1], this->IO_2_TRAPS[1])
-        - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0]));
+      this->mtxtime = this->mtx[0] - 5 + (min(
+        this->IO_1_TRAPS[1], this->IO_2_TRAPS[1], this->mtx[1])
+        - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0], this->mtx[0]));
     }
     this->pc = 0;
   }
@@ -227,6 +239,7 @@ char * pcb_toString(pcb_ptr this) {
     //PRI: 1, PID: 0, STATE: ready, PC: 0x00, IO1: [0,0,0,0], IO2: [0,0,0,0]
     pri = pcb_get_priority(this);
     id = this->pid;
+    int p = this->origpri;
     st = this->state;
     int ty = this->type;
     pc = this->pc;
@@ -236,10 +249,10 @@ char * pcb_toString(pcb_ptr this) {
     t2 = this->terminate;
     tc = this->termcount;
     
-    sprintf(str, "PRI: %d, PID: %d, STATE: %d, TYPE: %d, PC: %d, "
+    sprintf(str, "PRI: %d, OP: %d, PID: %d, STATE: %d, TYPE: %d, PC: %d, "
             "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
-        pri, id, st, ty, pc, mpc, cre, t1, t2, tc,
+        pri, p, id, st, ty, pc, mpc, cre, t1, t2, tc,
         this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
         this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3]
         );
