@@ -24,6 +24,9 @@ int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
 int iop = 0;
+int nummutualIncrease = 0;
+int callAmountMake_Mutual = 0;
+int increaseForNumMutual = 0;
 //char * proConStart = "ProducerConsumerPair:";
 //int numOfProCon; // the number of different Producer/Consumers that there are currently.
 
@@ -133,9 +136,16 @@ pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
   int io1[NUMTRAPS] = {10, 50, 100, 200};
   int io2[NUMTRAPS] = {30, 70, 150, 300};
   //each mtx lock it locks 0 and 1
-  int mtx[NUMTRAPS] = {35, 75, 180, 305};
-  int mynum = nummutual - MAXPAIR;
-  int mtxlock[NUMTRAPS] = {mynum, mynum+1, mynum, mynum+1}; //mutex list
+  int mtx[NUMTRAPS] = {35, 75, 155, 305};
+
+  if (callAmountMake_Mutual % 2 == 0 && callAmountMake_Mutual != 0) {
+    increaseForNumMutual = increaseForNumMutual + 1;
+  }
+  
+  int mtxlock[NUMTRAPS] = {nummutual + increaseForNumMutual,
+  nummutual + 1 + increaseForNumMutual, nummutual + 1 + increaseForNumMutual,
+  nummutual + increaseForNumMutual};
+  //mutex list
   pcb_initialize(this, pid, pri, ready, mutual, mpc,
     rawTime, t2);
   pcb_set_io1(this, io1);
@@ -143,6 +153,7 @@ pcb_ptr make_mutual (unsigned int pid, long rawTime, int pri,
   pcb_set_mtx(this, mtx);
   pcb_set_mtxlock(this, mtxlock);
   this->pairnumber = nummutual;
+  callAmountMake_Mutual = callAmountMake_Mutual + 1;
   return this;
 }
 //Condition variables are created when a thread is blocked.
