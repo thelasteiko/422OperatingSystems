@@ -27,15 +27,20 @@ pque_ptr pq_constructor() {
 
 int pq_enqueue(pque_ptr this, pcb_ptr new_node) {
     /*Adds a PCB to the appropriate priority queue.*/
+  //printf("Enqueing %s\r\n", pcb_toString(new_node));
+  if (!new_node || !this) {
+    printf("Error enqueueing in priq.");
+    return 1;
+  }
 	int index = pcb_get_priority(new_node);
-    if (index > TOTALQUE) {
-        printf("Error enqueueing in priq.");
-        return 1;
-    }
+  if (index > TOTALQUE-1 || index < 0) {
+      printf("Error enqueueing in priq.");
+      return 1;
+  }
 	que_ptr add_Here = this->priorityQue[index];
 	q_enqueue(add_Here, new_node);
-    this->node_count = this->node_count + 1;
-    return 0;
+  this->node_count = this->node_count + 1;
+  return 0;
 }
 
 pcb_ptr pq_dequeue(pque_ptr this) {
@@ -75,11 +80,12 @@ char * pq_toString(pque_ptr this) {
 	char * str = (char *) malloc(sizeof(char) * 10000);
     char * cur = (char *) malloc(sizeof(char) * 200);
     int i;
+    strcat(str, "PQue:\r\n");
     for (i = 0; i < TOTALQUE; i = i + 1) {
-        if (this->priorityQue[i]->node_count > 0) {
-            sprintf(cur,"%d%s\n", i, q_toString(this->priorityQue[i]));
+        //if (this->priorityQue[i]->node_count > 0) {
+            sprintf(cur,"%d%s\r\n", i, q_toString(this->priorityQue[i]));
             strcat(str, cur);
-        }
+        //}
     }
 	return str;
 }

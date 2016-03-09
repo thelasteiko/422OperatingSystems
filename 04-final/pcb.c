@@ -251,10 +251,12 @@ char * pcb_toString(pcb_ptr this) {
     
     sprintf(str, "PRI: %d, OP: %d, PID: %d, STATE: %d, TYPE: %d, PC: %d, "
             "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "
-            "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d]",
+            "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d], "
+            "MTX: [%d,%d,%d,%d]",
         pri, p, id, st, ty, pc, mpc, cre, t1, t2, tc,
         this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
-        this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3]
+        this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3],
+        this->mtx_lockon[0], this->mtx_lockon[1], this->mtx_lockon[2], this->mtx_lockon[3]
         );
     return str;
 }

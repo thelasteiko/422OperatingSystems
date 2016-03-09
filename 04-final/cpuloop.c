@@ -123,7 +123,7 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 	else if (current->type == consumer){
 		if (proConVar[num] > oldProConVar[num]) {
 			printf(current->name);
-			printf(" reads in value of %d.\n", proConVar[num]);
+			printf(" reads in value of %d.\r\n", proConVar[num]);
 			oldProConVar[num]++;
       //notify waiting producers
       cond_ptr c = this->prod_var[num];
@@ -137,32 +137,38 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
       return scheduler(this, that, current);
 		}
 	} else if (current->type == mutual) {//TODO
-    //the variable is cahnged 
+    //the variable is changed 
   }
+  //printf("Returning from MTX handle.\r\n");
   return current;
 }
 pcb_ptr mtx_free_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
   /*The current pcb has stopped using it's mutex and can release it.*/
-  printf("This MTX PCB: %s\r\n", pcb_toString(current));
+  //printf("This MTX PCB: %s\r\n", pcb_toString(current));
 	int num = pcb_get_mtx_index(current);
   if (num < 0) return current; //not a mutex type
   mutex_ptr m = this->mutexes[num];
   if (!m || m->using_pcb != current)
     return current; //not the right thread
   pcb_ptr next = mutex_unlock(this->mutexes[num], current);
-  printf("Next MTX: %p\r\n", next);
+  //printf("Next MTX: %p\r\n", next);
   //put next thread awaiting this mutex in rdyq
   if (next) {
-    printf("Next MTX PCB: %s\r\n", pcb_toString(next));
+    //printf("Next MTX PCB: %s\r\n", pcb_toString(next));
     scheduler(this, that, next);
   }
   return current;
 }
 
 pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
-  printf("This MTX PCB: %s\r\n", pcb_toString(current));
+  //printf("This MTX PCB: %s\r\n", pcb_toString(current));
   int num = pcb_get_mtx_index(current);
   if (num < 0) return current;
+  mutex_ptr m = this->mutexes[num];
+  if (!m) {
+    printf("Mutex not found!\r\n");
+    return current;
+  }
   if (!mutex_lock(this->mutexes[num], current))
     /*The current pcb requested a lock but was denied.*/
     return scheduler(this, that, current);
@@ -192,9 +198,9 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
           sch_ready(this);
         }
         //Update the priorities to prevent starvation.
-        if (run % 50 == 0) {
+        if (run % 500 == 0) {
           monitor(this);
-          //printf("%s\r\n", pq_toString(this->rdyq));
+          printf("%s\r\n", pq_toString(this->rdyq));
         }
         //STEP 1 ----------------------------------------------
         //Check for timer interrupt.
@@ -222,11 +228,13 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
             printf("IO 1 Complete: PID %d at %d\r\n", q_peek(this->iowait1)->pid,
               that->totaltime);
             current = io_inter_handle(this, that, current, ioready1);
+            printf("IO 1 end.\r\n");
         }
         if (io_2_inter(that, this->iowait2->node_count)) {
             printf("IO 2 Complete: PID %d at %d\r\n", q_peek(this->iowait2)->pid,
               that->totaltime);
             current = io_inter_handle(this, that, current, ioready2);
+            printf("IO 2 end.\r\n");
         }
         //STEP 6 ----------------------------------------------
         if (current->type >= producer) {

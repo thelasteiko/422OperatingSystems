@@ -190,14 +190,17 @@ int make_pcb(sch_ptr this, cpu_ptr that, unsigned int pid) {
       this->mutexes[this->numpair] = m;
       this->numpair = this->numpair + 1;
   } else if (prob <= 40 && this->nummutual < MAXPAIR+MAXMUTUAL) {
-      q_enqueue(this->enq, make_mutual(pid, that->totaltime,
-        pri, mpc, t2, this->nummutual));
+      pcb_ptr m1 = make_mutual(pid, that->totaltime,
+        pri, mpc, t2, this->nummutual);
+      q_enqueue(this->enq, m1);
       pid = pid + 1;
       q_enqueue(this->enq, make_mutual(pid, that->totaltime,
         pri, mpc, t2, this->nummutual));
       pid = pid + 1;
-      mutex_ptr m = mutex_constructor(this->nummutual);
-      this->mutexes[this->nummutual] = m;
+      mutex_ptr mtx1 = mutex_constructor(m1->mtx_lockon[0]);
+      mutex_ptr mtx2 = mutex_constructor(m1->mtx_lockon[1]);
+      this->mutexes[mtx1->mutex_name] = mtx1;
+      this->mutexes[mtx2->mutex_name] = mtx2;
       this->nummutual = this->nummutual + 1;
   } else if (this->numreg < MAXREG) {
     q_enqueue(this->enq, make_regular(pid, that->totaltime, pri, mpc, t2));
@@ -286,12 +289,14 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
     pcb_ptr next = NULL;
     pseudostack = that->pc;
     enum state_type inter = current->state;
-    //printf("%s\n", pq_toString(this->rdyq));
+    //printf("%s\r\n", pq_toString(this->rdyq));
     printf("Switching...%d : %d\r\n", current->state, current->type);
     printf("PID: %d, PC: %d\r\n", current->pid, current->pc);
+    //printf("PCB: %s\r\n", pcb_toString(current));
     int pri = pcb_get_priority(current);
     que_ptr from = pq_minpri(this->rdyq);
-    que_ptr to = this->rdyq->priorityQue[pri];
+    que_ptr to = NULL;
+    if (pri >= 0) to = this->rdyq->priorityQue[pri];
     switch(inter) {
         case running:
         next = current;
@@ -324,7 +329,10 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         break;
         
         case ioready1:
+        //printf("Waiting: %d\r\n", this->iowait1->node_count);
+        //printf("PCB: %s\r\n", pcb_toString(q_peek(this->iowait1)));
         next = q_dequeue(this->iowait1);
+        //printf("PCB: %s\r\n", pcb_toString(next));
         next->state = ready;
         pq_enqueue(this->rdyq, next);
         current->state = running;
@@ -332,7 +340,10 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         break;
         
         case ioready2:
+        //printf("Waiting: %d\r\n", this->iowait2->node_count);
+        //printf("PCB: %s\r\n", pcb_toString(q_peek(this->iowait2)));
         next = q_dequeue(this->iowait2);
+        //printf("PCB: %s\r\n", pcb_toString(next));
         next->state = ready;
         pq_enqueue(this->rdyq, next);
         current->state = running;
