@@ -40,7 +40,7 @@ typedef struct pcb_pc_type {
   int cv; //if it is waiting for a signal
   int mtxpc[ASIZE]; //when it attempts a lock
   int mtxlock[ASIZE]; //which mutex it will lock
-  int index; //which lock is it on
+  //int index; //which lock is it on
   int mtxtime;  //the time until it releases lock
   char * name;
 } pcb_pc;
@@ -58,14 +58,14 @@ pcb_base_ptr pcb = reg;
 pcb_init(pcb, 1, 1);
 */
 //Constructors for each type of pcb
-pcb_base_ptr pcb_make_busy(int pid, int tid);
-pcb_reg_ptr pcb_make_reg(int pid, int tid, int min, int mpc);
-pcb_pc_ptr pcb_make_pc(int pid, int tid, int mpc,
+pcb_base_ptr pcb_make_busy(int pid, int tid, int origpri);
+pcb_reg_ptr pcb_make_reg(int pid, int tid, int origpri, int min, int mpc);
+pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
   enum process_type type, int pair);
 //maybe just need pc
 pcb_m_ptr pcb_make_m(int pid, int tid);
 
-int pcb_init(pcb_base_ptr this, int pri, enum process_type type);
+//int pcb_init(pcb_base_ptr this, int pri, enum process_type type);
 
 //0:no trap, 1: trap IO 1, 2: trap IO 2
 //set iodevice here
@@ -74,7 +74,7 @@ int pcb_trap_io(pcb_reg_ptr this, int pc);
 //set mtx here
 int pcb_lock_mtx(pcb_pc_ptr this, int pc);
 //0: still has time, 1: reset time
-//if 1, reset mtx
+//if 1, reset mtx, also need to reset if in cond var
 int pcb_free_mtx(pcb_pc_ptr this);
 //changing shared variables???should be in isr???
 int pcb_run(pcb_base_ptr this, enum process_type type);
