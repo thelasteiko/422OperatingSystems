@@ -24,6 +24,6 @@ typedef mutex * mutex_ptr;
 mutex_ptr mutex_constructor(int name);
 int mutex_lock (mutex_ptr this, pcb_pc_ptr thispcb);
 int mutex_trylock (mutex_ptr this);
-pcb_ptr mutex_unlock (mutex_ptr this, pcb_ptr thispcb);
+pcb_pc_ptr mutex_unlock (mutex_ptr this, pcb_pc_ptr thispcb);
 
 #endif

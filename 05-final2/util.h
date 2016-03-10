@@ -22,7 +22,7 @@
 //prolly need to change these
 enum state_type {
   //0      1          2           3    4       5
-  ready, running, interrupted, wait1, wait2, ioready1,
+  ready, running, interrupted, iowait, ioready1,
   //6         7           8         9         10        11
   ioready2, p_blocked, m_blocked, prodwait, conswait, dead
 };
@@ -31,7 +31,7 @@ enum process_type {
   regular, busy, pc_pair, mutual
 };
 
-int random(int min, int max);
+int my_rand(int min, int max);
 int create_list(int min, int max, int * list);
 
 #endif

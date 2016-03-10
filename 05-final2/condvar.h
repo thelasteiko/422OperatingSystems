@@ -20,7 +20,11 @@ typedef struct cond_type {
 typedef cond * cond_ptr;
 
 cond_ptr cond_constructor();
+//have this enqueue
 int cond_wait(cond_ptr this, mutex_ptr that);
+//remove from condition variable
+//unlock condition if last waiting
+int cond_release(cond_ptr this, pcb_base_ptr that);
 pcb_pc_ptr cond_signal(cond_ptr this);
  
 #endif

@@ -17,12 +17,10 @@
 #include "pque.h"
 #include "list.h"
 
-mutex_ptr mutexes[MAXPAIR+(MAXMUTUAL*2)];
-cond_var cvar[MAXPAIR];
 //use the current's thread pid reference to locate
 //the parent process
 typedef struct sch_type {
-  pcb_base_ptr cpcb; //current thread
+  void * cpcb; //current thread
   prc_ptr cprc; //current process
   list_ptr processes;
   que_ptr enq;
@@ -31,16 +29,16 @@ typedef struct sch_type {
   que_ptr io2;
   list_ptr deadprc; //terminated processes
   //0: regular, 1: busy, 2: pc pairs, 3: mutual
-  int numbers[mutual];
+  int numbers[mutual+1];
 } sch;
 typedef sch * sch_ptr;
 
 sch_ptr sch_constructor(void);
 //run this only once
-pcb_base_ptr sch_init(sch_ptr this, int * pid);
+int sch_init(sch_ptr this, cpu_ptr that);
 //make prcs and schedule the threads
 int sch_enqueue(sch_ptr this, cpu_ptr that);
-//prc_ptr sch_prc(sch_ptr this);
+int sch_ready(sch_ptr this, void * that);
 //when a process is chosen the 'deadprc' needs to be searched
 //for the other shoe if it's type > 1
 //if found then remove from deadprc and get next pcb

@@ -12,6 +12,9 @@
 #define PCB
 
 #include "util.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct pcb_base_type {
   enum state_type state;
@@ -24,7 +27,7 @@ typedef struct pcb_base_type {
   int marker;
   int oldmarker;
 } pcb_base;
-typedef pcb_base pcb_base_ptr;
+typedef pcb_base * pcb_base_ptr;
 
 typedef struct pcb_reg_type {
   pcb_base super;
@@ -32,7 +35,7 @@ typedef struct pcb_reg_type {
   int * io_1_traps;
   int * io_2_traps;
 } pcb_reg;
-typedef pcb_reg pcb_reg_ptr;
+typedef pcb_reg * pcb_reg_ptr;
 
 typedef struct pcb_pc_type {
   pcb_reg super;
@@ -70,19 +73,23 @@ pcb_m_ptr pcb_make_m(int pid, int tid);
 //0:no trap, 1: trap IO 1, 2: trap IO 2
 //set iodevice here
 int pcb_trap_io(pcb_reg_ptr this, int pc);
-//0: no lock, >0: locks at pc, return mtx, increase index
+//-1: no lock, >0: locks at pc, return mtx, increase index
 //set mtx here
 int pcb_lock_mtx(pcb_pc_ptr this, int pc);
 //0: still has time, 1: reset time
 //if 1, reset mtx, also need to reset if in cond var
 int pcb_free_mtx(pcb_pc_ptr this);
 //changing shared variables???should be in isr???
-int pcb_run(pcb_base_ptr this, enum process_type type);
+//int pcb_run(pcb_base_ptr this, enum process_type type);
 //pc >= mpc ? pc = 0, return 1
 //return 0
 //called by prc
 int pcb_reset_pc(pcb_base_ptr this, int mpc);
 int pcb_set_priority(pcb_base_ptr this, int origpri);
 int pcb_set_marker(pcb_base_ptr this);
+
+char * pcb_base_toString(pcb_base_ptr this);
+char * pcb_reg_toString(pcb_reg_ptr this);
+char * pcb_pc_toString(pcb_pc_ptr this);
 
 #endif
