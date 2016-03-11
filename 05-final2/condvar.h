@@ -25,6 +25,8 @@ int cond_wait(cond_ptr this, mutex_ptr that);
 //remove from condition variable
 //unlock condition if last waiting
 int cond_release(cond_ptr this, pcb_base_ptr that);
+//needs to lock mutex on behalf of waiting
+//return so that it can be enqueued
 pcb_pc_ptr cond_signal(cond_ptr this);
  
 #endif

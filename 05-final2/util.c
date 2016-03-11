@@ -28,3 +28,21 @@ int create_list(int min, int max, int * list) {
   }
   return 0;
 }
+
+int get_free_pair(enum process_type type) {
+  int i, k;
+  if (type == pc_pair) {
+    i = 0;
+    k = MAXPAIR;
+  } else if (type == mutual) {
+    i = MAXPAIR;
+    k = MAXMUTUAL + MAXPAIR;
+  } else return -1;
+  for (; i < k; i = i + 1) {
+    if (pairs[i] == 0) {
+      pairs[i] = 1;
+      return i;
+    }
+  }
+  return -1;
+}

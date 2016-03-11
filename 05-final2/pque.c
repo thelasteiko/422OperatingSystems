@@ -14,26 +14,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-pque_ptr pq_constructor() {
+pque_ptr pq_constructor(int size) {
     /*Create a new priority queue.*/
 	pque_ptr q = (pque_ptr)malloc(sizeof(pque));
-  q->size = TOTALQUE;
 	int i;
-	for (i = 0; i < q->size; i = i+1) {
+	for (i = 0; i < size; i = i+1) {
         q->priorityQue[i] = que_constructor();
 	}
   q->node_count = 0;
+  q->size = size;
 	return q;
 }
 
-int pq_enqueue(pque_ptr this, pcb_ptr new_node) {
+int pq_enqueue(pque_ptr this, void * new_node, int index) {
     /*Adds a PCB to the appropriate priority queue.*/
   //printf("Enqueing %s\r\n", pcb_toString(new_node));
   if (!new_node || !this) {
     printf("Error enqueueing in priq.");
     return 1;
   }
-	int index = pcb_get_priority(new_node);
+	//int index = pcb_get_priority(new_node);
   if (index > this->size-1 || index < 0) {
       printf("Error enqueueing in priq.");
       return 1;
@@ -44,7 +44,7 @@ int pq_enqueue(pque_ptr this, pcb_ptr new_node) {
   return 0;
 }
 
-pcb_ptr pq_dequeue(pque_ptr this) {
+void * pq_dequeue(pque_ptr this) {
     /*Dequeues and returns a PCB pointer.*/
 	int index = 0;
 	while (this->priorityQue[index]->node_count == 0
@@ -52,12 +52,12 @@ pcb_ptr pq_dequeue(pque_ptr this) {
 		index = index + 1;
 	}
     if (index >= this->size) return NULL;
-	pcb_ptr removed = q_dequeue((que_ptr) this->priorityQue[index]);
+	void * removed = q_dequeue((que_ptr) this->priorityQue[index]);
     this->node_count = this->node_count - 1;
 	return removed;
 }
 
-pcb_ptr pq_peek(pque_ptr this) {
+void * pq_peek(pque_ptr this) {
     /*Returns what will be removed upon dequeueing.*/
 	int index = 0;
 	while (this->priorityQue[index]->node_count == 0) {

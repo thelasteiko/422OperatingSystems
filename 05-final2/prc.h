@@ -16,6 +16,7 @@
 
 typedef struct prc_type {
   int pid;
+  int pair;
   enum process_type type;
   int origpri;
   int max_pc;
@@ -30,13 +31,12 @@ typedef prc * prc_ptr;
 prc_ptr prc_constructor(void);
 //this is where I make the appropriate pcbs
 int prc_initialize(prc_ptr this, int pid, int tid, int pri,
-  long creation, enum process_type type,
-  int pair);
+  long creation, enum process_type type);
 void * prc_thread(prc_ptr this, int tid);
 //0: keep going, 1: terminate process
 //check each -> 1 ? add to termcount
 //call inside ISR handle
-int prc_check_term(prc_ptr this, int tid);
+int prc_check_term(prc_ptr this, int tid, int pc);
 
 char * prc_toString(prc_ptr this);
 

@@ -17,8 +17,9 @@
 #define TOTALQUE 4
 
 typedef struct pque_type {
-	 que_ptr priorityQue[TOTALQUE];
-     int node_count;
+	que_ptr priorityQue[TOTALQUE];
+  int node_count;
+  int size;
 } pque;
 
 typedef pque * pque_ptr;

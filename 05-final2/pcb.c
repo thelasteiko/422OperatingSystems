@@ -29,14 +29,25 @@ pcb_reg_ptr pcb_make_reg(int pid, int tid, int origpri,
   this->super = *pcb_make_busy(pid, tid, origpri); //getting value
   this->super.pri = origpri;
   this->iodevice = -1;
-  this->io_1_traps = (int *) malloc(sizeof(int)*ASIZE);
-  this->io_2_traps = (int *) malloc(sizeof(int)*ASIZE);
-  create_list(min, mpc, this->io_1_traps);
-  create_list(this->io_1_traps[ASIZE-1], mpc, this->io_2_traps);
+  int last, i, next, k;
+  int max = mpc;
+  last = min;
+  k = max / 10;
+  next = k;
+  for (i = 0; i < ASIZE; i = i + 1) {
+    if (next > max) next = max;
+    this->io_1_traps[i] = my_rand(last, next);
+    last = this->io_1_traps[i] + 1;
+    next = last + k;
+    this->io_2_traps[i] = my_rand(last, next);
+    last = this->io_2_traps[i] + 1;
+    next = last + k;
+  }
   return this;
 }
 pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
   enum process_type type, int pair) {
+    printf("Making PC or Mutual %d\r\n", pair);
   pcb_pc_ptr this = (pcb_pc_ptr) malloc(sizeof(pcb_pc));
   //start with hard coded values
   this->mtx = -1;
@@ -46,6 +57,7 @@ pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
   int m1[ASIZE] = {5, 17, 32, 54};
   int i, p1 = pair*2, p2 = pair*2+1;
   for (i = 0; i < ASIZE; i = i + 1) {
+    printf("(%d,%d,%d,%d)", i, pair, p1, p2);
     this->mtxpc[i] = m1[i];
     if (type == pc_pair)
       this->mtxlock[i] = pair;
@@ -53,6 +65,7 @@ pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
       this->mtxlock[i] = p1;
     else if (type == mutual && i%2==1)
       this->mtxlock[i] = p2;
+    printf(" : %d\r\n", this->mtxlock[i]);
   }
   this->super = *pcb_make_reg(pid, tid, origpri, 54, mpc);
   return this;
@@ -97,8 +110,10 @@ int pcb_free_mtx(pcb_pc_ptr this) {
 //pc >= mpc ? pc = 0, return 1
 //return 0
 //called by prc
-int pcb_reset_pc(pcb_base_ptr this, int mpc) {
-  if (this->pc >= mpc) {
+int pcb_reset_pc(pcb_base_ptr this, int mpc, int pc) {
+  //get pc from cpu since it doesn't register with
+  //the pcb until the pcb is changed out
+  if (pc >= mpc) {
     this->pc = 0;
     return 1;
   }
@@ -127,6 +142,44 @@ int pcb_set_priority(pcb_base_ptr this, int origpri) {
 int pcb_set_marker(pcb_base_ptr this) {
   this->marker = this->marker + 1;
   return 0;
+}
+
+pcb_base_ptr cast_base(void * this, enum process_type from) {
+  if (from == busy) {
+    return (pcb_base_ptr) this;
+  } else if (from == regular) {
+    pcb_reg_ptr temp = (pcb_reg_ptr) this;
+    return &temp->super;
+  } else if (from >= pc_pair) {
+    pcb_pc_ptr temp = (pcb_pc_ptr) this;
+    return &temp->super.super;
+  }
+  return NULL;
+}
+
+pcb_reg_ptr cast_reg (void * this, enum process_type from) {
+  if (from == busy) {
+    printf("Error: Cannot cast busy to regular.\r\n");
+    return NULL;
+  } else if (from == regular) {
+    return (pcb_reg_ptr) this;
+  } else if (from >= pc_pair) {
+    pcb_pc_ptr temp = (pcb_pc_ptr) this;
+    return &temp->super;
+  }
+  return NULL;
+}
+
+pcb_pc_ptr cast_pc (void * this, enum process_type from) {
+  if (from == busy) {
+    printf("Error: Cannot cast busy to pc.\r\n");
+    return NULL;
+  } else if (from == regular) {
+    printf("Error: Cannot cast regular to pc.\r\n");
+  } else if (from >= pc_pair) {
+    return (pcb_pc_ptr) this;
+  }
+  return NULL;
 }
 
 char * pcb_base_toString(pcb_base_ptr this) {
@@ -163,12 +216,14 @@ char * pcb_pc_toString(pcb_pc_ptr this) {
   char * str = (char *) malloc(sizeof(char) * (80+80+90));
   char * curr = (char *) malloc(sizeof(char) * 90);
   strcat(str, pcb_reg_toString(that));
-  sprintf(curr, ", NM: %s, MTX: %d, CV: %d, MTM: %d, " //28 + 10 + 6 = 44
+  sprintf(curr, ", NM: %d, MTX: %d, CV: %d, MTM: %d, " //28 + 10 + 6 = 44
     "MPC: [%d,%d,%d,%d], MLC: [%d,%d,%d,%d]", //22 + 24 = 46
     this->name, this->mtx, this->cv, this->mtxtime,
     this->mtxpc[0], this->mtxpc[1], this->mtxpc[2], this->mtxpc[3],
     this->mtxlock[0], this->mtxlock[1], this->mtxlock[2], this->mtxlock[3]
   );
+  printf("MLC: [%d,%d,%d,%d]",this->mtxlock[0], this->mtxlock[1],
+    this->mtxlock[2], this->mtxlock[3]);
   strcat(str, curr);
   return str;
 }

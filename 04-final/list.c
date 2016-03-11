@@ -92,10 +92,25 @@ void * removeNode(list_ptr this, ln_ptr node) {
 }
 void * ls_remove(list_ptr this, int index) {
   /*Gets a value and removes it from the list.*/
-  if (index >= this->node_count)
+  if (index >= this->node_count || index < 0)
     return NULL;
   ln_ptr node = getNodeAt(this, index);
   return removeNode(this, node);
+}
+void * ls_removeVal(list_ptr this, void * value) {
+  return ls_remove(this, ls_contains(this, value));
+}
+int ls_contains(list_ptr this, void * value) {
+  /*Returns the index of the value.*/
+  ln_ptr temp = this->first;
+  int i = -1;
+  while (temp) {
+    i = i + 1;
+    if (temp->value == value)
+      return i;
+    temp = temp->next;
+  }
+  return i;
 }
 int ls_destructor(list_ptr this) {
   /*Destroys all nodes and the list.*/

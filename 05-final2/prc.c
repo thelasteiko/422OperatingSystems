@@ -24,8 +24,10 @@ prc_ptr prc_constructor(void) {
 }
 //this is where I make the appropriate pcbs
 int prc_initialize(prc_ptr this, int pid, int tid, int pri,
-  long creation, enum process_type type,
-  int pair) {
+  long creation, enum process_type type) {
+    int pair = -1;
+    int p;
+    this->pair = pair;
     this->pid = pid;
     this->origpri = pri;
     this->max_pc = my_rand(MAXTIME * 3, MAXTIME * 4);
@@ -45,30 +47,38 @@ int prc_initialize(prc_ptr this, int pid, int tid, int pri,
       tid = tid + 1;
       break;
       case pc_pair:
-      temp = pcb_make_pc(pid, tid, pri, this->max_pc, pc_pair,
-        pair);
-      temp->name = (char *) malloc(sizeof(char) * 20);
-      sprintf(temp->name, "Producer %d:%d", pid, pair);
+      pair = get_free_pair(pc_pair);
+      if (pair >= MAXPAIR)
+        printf("Error: PC pair allocated M pair space.\r\n");
+      if (pair < 0) {
+        printf("Error: Cannot create pair.\r\n");
+        return prc_initialize(this,pid,tid,pri,creation,busy);
+      }
+      p = pair % MAXPAIR;
+      temp = pcb_make_pc(pid, tid, pri, this->max_pc, pc_pair,p);
+      temp->name = producer;
       ls_insertAt(this->threads, 0, temp);
       tid = tid + 1;
-      temp = pcb_make_pc(pid, tid, pri, this->max_pc, pc_pair,
-        pair);
-      temp->name = (char *) malloc(sizeof(char) * 20);
-      sprintf(temp->name, "Consumer %d:%d", pid, pair);
+      temp = pcb_make_pc(pid, tid, pri, this->max_pc, pc_pair,p);
+      temp->name = consumer;
       ls_insertAt(this->threads, 0, temp);
       tid = tid + 1;
       break;
       case mutual:
-      temp = pcb_make_pc(pid, tid, pri, this->max_pc, mutual,
-        pair);
-      temp->name = (char *) malloc(sizeof(char) * 20);
-      sprintf(temp->name, "Mutual1 %d:%d", pid, pair);
+      pair = get_free_pair(mutual);
+      if (pair < MAXPAIR)
+        printf("Error: M pair allocated PC pair space.\r\n");
+      if (pair < 0) {
+        printf("Error: Cannot create pair.\r\n");
+        return prc_initialize(this,pid,tid,pri,creation,busy);
+      }
+      p = pair % MAXPAIR;
+      temp = pcb_make_pc(pid, tid, pri, this->max_pc, mutual,p);
+      temp->name = mutual1;
       ls_insertAt(this->threads, 0, temp);
       tid = tid + 1;
-      temp = pcb_make_pc(pid, tid, pri, this->max_pc, mutual,
-        pair);
-      temp->name = (char *) malloc(sizeof(char) * 20);
-      sprintf(temp->name, "Mutual2 %d:%d", pid, pair);
+      temp = pcb_make_pc(pid, tid, pri, this->max_pc, mutual,p);
+      temp->name = mutual2;
       ls_insertAt(this->threads, 0, temp);
       tid = tid + 1;
       break;
@@ -77,22 +87,22 @@ int prc_initialize(prc_ptr this, int pid, int tid, int pri,
 }
 
 void * prc_thread(prc_ptr this, int tid) {
-  void * node = NULL;
+  pcb_base_ptr node = NULL;
   int i;
   for (i = 0; i < this->threads->node_count; i = i + 1) {
-    node = ls_get(this->threads, i);
+    node = (pcb_base_ptr) ls_get(this->threads, i);
     if (node && node->tid == tid)
       return (void *) node;
   }
   return (void *) node;
 }
 
-int prc_check_term(prc_ptr this, int tid) {
+int prc_check_term(prc_ptr this, int tid, int pc) {
   int i = 0;
   pcb_base_ptr temp = (pcb_base_ptr) ls_get(this->threads, i);
   while (temp) {
     i = i + 1;
-    if (pcb_reset_pc(temp, this->max_pc)) {
+    if (pcb_reset_pc(temp, this->max_pc, pc)) {
       this->termcount = this->termcount + 1;
     }
     temp = (pcb_base_ptr) ls_get(this->threads, i);

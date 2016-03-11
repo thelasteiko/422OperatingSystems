@@ -43,11 +43,13 @@ int sch_ready(sch_ptr this, void * that);
 //for the other shoe if it's type > 1
 //if found then remove from deadprc and get next pcb
 int scheduler(sch_ptr this, cpu_ptr that);
+//what was this for?
+//STEP 4 : Check for resetting pc or termination.
 int sch_check_pc(sch_ptr this, cpu_ptr that);
 //manage priorities
 int sch_monitor(sch_ptr this);
-int sch_dumptrash(sch_ptr this);
+//int sch_dumptrash(sch_ptr this);
 int sch_destructor(sch_ptr this);
-char * sch_toString(sch_ptr this);
+//char * sch_toString(sch_ptr this);
 
 #endif

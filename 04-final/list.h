@@ -19,6 +19,8 @@ list_ptr ls_constructor(void);
 void * ls_get(list_ptr this, int index);
 int ls_insertAt(list_ptr this, int index, void * value);
 void * ls_remove(list_ptr this, int index);
+void * ls_removeVal(list_ptr this, void * value);
+int ls_contains(list_ptr this, void * value);
 int ls_destructor(list_ptr this);
 
 #endif

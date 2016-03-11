@@ -18,8 +18,8 @@
 enum state_type {
   //0      1          2           3    4       5
   ready, running, interrupted, wait1, wait2, ioready1,
-  //6         7       8         9         10
-  ioready2, blocked, prodwait, conswait, dead
+  //6         7           8         9         10        11
+  ioready2, p_blocked, m_blocked, prodwait, conswait, dead
 };
 enum process_type {
   //0       1     2            3      4
@@ -33,18 +33,22 @@ typedef struct pcb_type {
     //These are necessary whatever the type.
     int pid;
     int priority;
+    
     enum state_type state;
     enum process_type type;
-    unsigned int pc;
-    unsigned int max_pc;
+    int pc;
+    
+    int max_pc;
     long creation; //when it was created
     long termination; //when it is terminated
     int terminate; //how many cycles until process stops; 0 for infinity
     int termcount; //how many time max_pc is passed
+    
     int origpri; //the original priority
     int pridown; //time until demotion
     int marker; //process has run
     int oldmarker; //last time process ran
+    
     //These depend on the type.
     int IO_1_TRAPS[NUMTRAPS];
     int IO_2_TRAPS[NUMTRAPS];
@@ -61,7 +65,7 @@ pcb_ptr pcb_constructor();
 /*Initializes the values of a pcb.*/
 int pcb_initialize(pcb_ptr this, int pid, int priority,
     enum state_type state, enum process_type type,
-    unsigned int max_pc, long creation, int terminate);
+    int max_pc, long creation, int terminate);
 /*Set the priority of the current process.*/
 int pcb_set_priority (pcb_ptr this);
 /*Returns the priority of the current process.*/

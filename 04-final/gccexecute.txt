@@ -1,7 +1,16 @@
+gcc -Wall -c util.c -o util.o
+gcc -Wall -c list.c -o list.o
 gcc -Wall -c pcb.c -o pcb.o
+gcc -Wall -c prc.c -o prc.o
+gcc -Wall -c cpu.c -o cpu.o
 gcc -Wall -c que.c -o que.o
 gcc -Wall -c pque.c -o pque.o
-gcc -Wall -c cpu.c -o cpu.o
 gcc -Wall -c sch.c -o sch.o
 gcc -Wall -c mutex.c -o mutex.o
+gcc -Wall -c condvar.c -o condvar.o
+
+gcc -Wall util.h util.o list.h list.o pcb.h pcb.o prc.h prc.o que.h que.o pque.h pque.o sch.h sch.o mutex.h mutex.o condvar.h condvar.o cpu.h cpu.c -o cpu.exe
+
 gcc -Wall pcb.h pcb.o que.h que.o pque.h pque.o cpu.h cpu.o sch.h sch.o mutex.h mutex.o cpuloop.c -o cpuloop.exe
+gcc -Wall pcb.h pcb.o util.h util.o testpcb.c -o testpcb.exe
+gcc -Wall pcb.h pcb.o util.h util.o list.h list.o prc.h prc.o testprc.c -o testprc.exe

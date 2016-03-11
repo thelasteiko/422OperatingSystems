@@ -129,7 +129,7 @@ prc_ptr ls_containsPID(list_ptr this, int pid) {
   }
   return temp2;
 }
-*/
+
 pcb_base_ptr ls_containsTID(list_ptr this, int tid) {
   ln_ptr temp = this->first;
   pcb_base_ptr temp2 = NULL;
@@ -140,5 +140,5 @@ pcb_base_ptr ls_containsTID(list_ptr this, int tid) {
     temp = temp->next;
   }
   return temp2;
-}
+}*/
 

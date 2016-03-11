@@ -15,7 +15,7 @@
 #include "pcb.h"
 
 typedef struct pque_type {
-	que_ptr * priorityQue;
+	que_ptr priorityQue[MAXPRI+1];
   int node_count;
   int size;
 } pque;

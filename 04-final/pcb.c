@@ -14,21 +14,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAXTIME 300
+#define MAXTIME 10
 
 int error_handle(char * error, int error_code, int critical) {
     printf("Error %d: %s\n", error_code, error);
     return error_code;
 }
-int min(int a, int b, int c) {
-  if (a <= b && a <= c) return a;
-  if (b <= a && b <= c) return b;
-  else return c;
+int min(int a, int b/*, int c*/) {
+  if (a <= b) return a;
+  return b;
+  //if (a <= b && a <= c) return a;
+  //if (b <= a && b <= c) return b;
+  //else return c;
 }
 int pcb_set_original(pcb_ptr this, int priority) {
   this->origpri = priority;
   this->priority = priority;
-  this->pridown = (this->origpri * MAXTIME) + MAXTIME;
+  this->pridown = MAXTIME;
   return 0;
 }
 pcb_ptr pcb_constructor() {
@@ -62,7 +64,7 @@ pcb_ptr pcb_constructor() {
 }
 int pcb_initialize(pcb_ptr this, int pid, int priority,
     enum state_type state, enum process_type type,
-    unsigned int max_pc, long creation, int terminate) {
+    int max_pc, long creation, int terminate) {
         this->pid = pid;
         this->origpri = priority;
         this->state = state;
@@ -75,17 +77,21 @@ int pcb_initialize(pcb_ptr this, int pid, int priority,
 }
 
 int pcb_set_priority (pcb_ptr this) {
+    //printf("PID: %d, OP: %d, Pri: %d, M: %d, OM: %d\r\n",
+    //  this->pid, this->origpri, this->priority, this->marker,
+    //  this->oldmarker);
+  if (this->origpri == 0) return 0;
   if (this->marker < this->oldmarker) {
     if (this->pridown == 0) {
       if (this->priority > 0)
         this->priority = this->priority - 1;
-      this->pridown = (this->origpri * MAXTIME) + MAXTIME;
+      this->pridown = MAXTIME;
     } else
       this->pridown = this->pridown - 1;
   } else {
     this->priority = this->origpri;
     this->oldmarker = this->marker;
-    this->pridown = (this->origpri * MAXTIME) + MAXTIME;
+    this->pridown = MAXTIME;
   }
   //this->pridown = (this->origpri * MAXTIME) + MAXTIME;
   return 0;
@@ -157,8 +163,8 @@ int pcb_set_mtxlock (pcb_ptr this, int * mtx) {
 	}
   this->index = 0;
   this->mtxtime = mtx[0] - 5 + (min(
-    this->IO_1_TRAPS[1], this->IO_2_TRAPS[1], this->mtx[1])
-    - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0], this->mtx[0]));
+    this->IO_1_TRAPS[1], this->IO_2_TRAPS[1])//, this->mtx[1])
+    - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0]));//, this->mtx[0]));
   return 0;
 }
 
@@ -177,10 +183,10 @@ int pcb_set_name(pcb_ptr this, char * name) {
 }
 
 int pcb_get_mtx_index(pcb_ptr this) {
-  if (this->index < 0) return -1;
+  if (this->index < 0 || this->index >= NUMTRAPS) return -1;
   else return this->mtx_lockon[this->index];
 }
-//TODO just check against minimum of the three arrays
+//TODO just check against minimum of the arrays
 //if the current pc value is less than or equal to
 //return 1
 int pcb_mtx_inter (pcb_ptr this, int pc) {
@@ -194,16 +200,19 @@ int pcb_mtx_inter (pcb_ptr this, int pc) {
     if (this->index < 3)
       this->mtxtime = this->mtx[this->index] - 5 + (min(
         this->IO_1_TRAPS[this->index+1],
-        this->IO_2_TRAPS[this->index+1],
-        this->mtx[this->index+1])
+        this->IO_2_TRAPS[this->index+1])//,
+        //this->mtx[this->index+1])
         - min(this->IO_1_TRAPS[this->index],
-        this->IO_2_TRAPS[this->index],
-        this->mtx[this->index]));
-    else if (this->index == 3)
-      this->mtxtime = this->mtx[this->index] - 5 + (this->max_pc
+        this->IO_2_TRAPS[this->index]));//,
+        //this->mtx[this->index]));
+    else if (this->index == 3) {
+      int npc = this->max_pc-500; //max pc is at least 900
+      this->mtxtime = this->mtx[this->index] + npc;
+      /*(this->max_pc
         - min(this->IO_1_TRAPS[this->index],
-        this->IO_2_TRAPS[this->index],
-        this->mtx[this->index]));
+        this->IO_2_TRAPS[this->index]));//,
+        //this->mtx[this->index]));*/
+    }
     return 1;
   } else
     this->mtxtime = this->mtxtime - 1;
@@ -216,8 +225,8 @@ int pcb_reset_pc(pcb_ptr this) {
     if (this->index > 0) {
       this->index = 0;
       this->mtxtime = this->mtx[0] - 5 + (min(
-        this->IO_1_TRAPS[1], this->IO_2_TRAPS[1], this->mtx[1])
-        - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0], this->mtx[0]));
+        this->IO_1_TRAPS[1], this->IO_2_TRAPS[1])//, this->mtx[1])
+        - min(this->IO_1_TRAPS[0], this->IO_2_TRAPS[0]));//, this->mtx[0]));
     }
     this->pc = 0;
   }
@@ -234,7 +243,7 @@ char * pcb_toString(pcb_ptr this) {
     char * str;
     int pri, st, id, t2, tc;
     long cre, t1;
-    unsigned int pc, mpc;
+    int pc, mpc;
     str = (char *) malloc(sizeof(char) * 80);
     //PRI: 1, PID: 0, STATE: ready, PC: 0x00, IO1: [0,0,0,0], IO2: [0,0,0,0]
     pri = pcb_get_priority(this);

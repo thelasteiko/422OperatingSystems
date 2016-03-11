@@ -21,8 +21,25 @@
 int proConVar[10]; //A global variable for each Producer/Consumer pair.
 int oldProConVar[10]; //Producer / 2 = (Consumer - 1) / 2 = array number.
 int mutualVar[20];
-int pairTerminationFlag[20];
 
+int pair_dead(sch_ptr this, pcb_ptr current) {
+  int num = current->pairnumber;
+  if (num < 0) return 0;
+  if (current->type == producer || current->type == consumer) {
+    if (this->p_pairs[current->pairnumber] >= 2) {
+      this->p_pairs[current->pairnumber] = 0;
+      this->numpair = this->numpair - 1;
+          return 1;
+    }
+  } else if (current->type == mutual) {
+        if (this->m_pairs[current->pairnumber] >= 2) {
+          this->m_pairs[current->pairnumber] = 0;
+          this->nummutual = this->nummutual - 1;
+          return 1;
+        }
+  }
+  return 0;
+}
 int monitor (sch_ptr this) {
   /*Iterates through the ready queue and resets priority
    * levels to prevent starvation. */
@@ -36,17 +53,30 @@ int monitor (sch_ptr this) {
       //it should be at
       pcb_set_priority(temp2);
       n = n - 1;
-      //requeue the PCB to the proper priority level
-      int needToEnqueue = 1;
-      if (temp2->type >= producer && pairTerminationFlag[temp2->pairnumber]) {
-        needToEnqueue = 0;
-        pairTerminationFlag[temp2->pairnumber] = 0;
-        pcb_destructor(temp2);
-      }
-      if (needToEnqueue) {
+      if (pair_dead(this, temp2))
+        q_enqueue(this->deadq, temp2);
+      else
+        //requeue the PCB to the proper priority level
         pq_enqueue(this->rdyq, temp2);
-      }
     }
+  }
+  n = this->iowait1->node_count;
+  while(n > 0) {
+    pcb_ptr temp3 = q_dequeue(this->iowait1);
+    if (pair_dead(this, temp3))
+      q_enqueue(this->deadq, temp3);
+    else
+      q_enqueue(this->iowait1, temp3);
+    n = n - 1;
+  }
+  n = this->iowait2->node_count;
+  while(n > 0) {
+    pcb_ptr temp3 = q_dequeue(this->iowait2);
+    if (pair_dead(this, temp3))
+      q_enqueue(this->deadq, temp3);
+    else
+      q_enqueue(this->iowait2, temp3);
+    n = n - 1;
   }
   return 0;
 }
@@ -77,8 +107,13 @@ pcb_ptr term_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current) {
     /*ISR for termination of a process.*/
     current->state = dead;
     current->termination = that->totaltime;
-    if (current->pairnumber > 0) {
-      pairTerminationFlag[current->pairnumber] = 1;
+    if (current->pairnumber >= 0) {
+      if (current->type == producer || current->type == consumer)
+        this->p_pairs[current->pairnumber] = 
+        this->p_pairs[current->pairnumber] + 1;
+      if (current->type == mutual)
+        this->m_pairs[current->pairnumber] = 
+        this->m_pairs[current->pairnumber] + 1;
     }
     return scheduler(this, that, current);
 }
@@ -94,11 +129,10 @@ pcb_ptr io_inter_handle (sch_ptr this, cpu_ptr that, pcb_ptr current, enum state
 pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 	int num = pcb_get_mtx_index(current);
   if (num < 0) return current; //not a mutex type
-  mutex_ptr m = this->mutexes[num];
-  if (!m || m->using_pcb != current)
-    return current; //not the right thread
-  printf("Has mtx: PID %d at %d\r\n", current->pid, that->totaltime);
 	if (current->type == producer) {
+    mutex_ptr m = this->p_mtx[num];
+    if (!m || m->using_pcb != current)
+      return current; //not the right thread
 		if (proConVar[num] <= oldProConVar[num]) {
 			proConVar[num]++;
 			printf(current->name);
@@ -121,6 +155,9 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 		}
 	}
 	else if (current->type == consumer){
+    mutex_ptr m = this->p_mtx[num];
+    if (!m || m->using_pcb != current)
+      return current; //not the right thread
 		if (proConVar[num] > oldProConVar[num]) {
 			printf(current->name);
 			printf(" reads in value of %d.\r\n", proConVar[num]);
@@ -137,7 +174,11 @@ pcb_ptr mtx_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
       return scheduler(this, that, current);
 		}
 	} else if (current->type == mutual) {//TODO
-    //the variable is changed 
+    //the variable is changed
+    mutex_ptr m = this->m_mtx[num];
+    if (!m || m->using_pcb != current)
+      return current; //not the right thread
+    
   }
   //printf("Returning from MTX handle.\r\n");
   return current;
@@ -147,10 +188,25 @@ pcb_ptr mtx_free_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
   //printf("This MTX PCB: %s\r\n", pcb_toString(current));
 	int num = pcb_get_mtx_index(current);
   if (num < 0) return current; //not a mutex type
-  mutex_ptr m = this->mutexes[num];
-  if (!m || m->using_pcb != current)
-    return current; //not the right thread
-  pcb_ptr next = mutex_unlock(this->mutexes[num], current);
+  mutex_ptr m = NULL;
+  if (current->type == producer || current->type == consumer)
+    m = this->p_mtx[num];
+  else if (current->type == mutual)
+    m = this->m_mtx[num];
+  if (!m)
+    return current;
+  if (m->using_pcb != current) {
+    int n = m->waiting_pcbs->node_count;
+    while(n > 0) {
+      pcb_ptr temp = q_dequeue(m->waiting_pcbs);
+      if (temp != current)
+        q_enqueue(m->waiting_pcbs, temp);
+      n = n - 1;
+    }
+    return current;
+  }
+    
+  pcb_ptr next = mutex_unlock(m, current);
   //printf("Next MTX: %p\r\n", next);
   //put next thread awaiting this mutex in rdyq
   if (next) {
@@ -164,24 +220,33 @@ pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
   //printf("This MTX PCB: %s\r\n", pcb_toString(current));
   int num = pcb_get_mtx_index(current);
   if (num < 0) return current;
-  mutex_ptr m = this->mutexes[num];
+  mutex_ptr m = NULL;
+  if (current->type == producer || current->type == consumer)
+    m = this->p_mtx[num];
+  else if (current->type == mutual)
+    m = this->m_mtx[num];
   if (!m) {
     printf("Mutex not found!\r\n");
     return current;
   }
-  if (!mutex_lock(this->mutexes[num], current))
+  if (!mutex_lock(m, current)) {
     /*The current pcb requested a lock but was denied.*/
+    if (current->type == producer || current->type == consumer)
+      current->state = p_blocked;
+    else current->state = m_blocked;
     return scheduler(this, that, current);
+  }
   /*The current pcb requested a lock and was allowed.*/
   else return current;
 }
+
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 50000; //This is how long it runs
-    unsigned int pid = random1(0, 200);
+    int run = 100000; //This is how long it runs
+    int pid = random1(0, 200);
     //This is how many PCBs will be made.
-    unsigned int maxpid = pid + 30;
+    int max = (MAXREG + MAXBUSY + MAXPAIR + MAXMUTUAL)-10;
     pcb_ptr current = sch_init(this, that, &pid);
     printf("Process created: PID %d at %d\r\n", pid, that->totaltime);
     while (run) {
@@ -191,16 +256,16 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         //To keep track of termination and creation times.
         that->totaltime = that->totaltime + 1;
         //Add PCBs if there are fewer than the max.
-        if(pid < maxpid) {
-          printf("Loading PCBs.\r\n");
+        if(sch_numpcbs(this) < max) {
+          printf("Loading PCBs: %d\r\n", pid);
           pid = sch_enqueue(this, that, pid);
           printf("Ready...\r\n");
           sch_ready(this);
         }
         //Update the priorities to prevent starvation.
-        if (run % 500 == 0) {
+        if (run % MAXTIME == 0) {
           monitor(this);
-          printf("%s\r\n", pq_toString(this->rdyq));
+          printf("%s\r\n", sch_toString(this));
         }
         //STEP 1 ----------------------------------------------
         //Check for timer interrupt.
@@ -214,13 +279,14 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         //STEP 2 ----------------------------------------------
         //If the current PCB pc value is at the max
         //reset the PCB pc and increase the termination count.
-        if (pcb_reset_pc(current)) {
+        if (pcb_reset_pc(current) || pair_dead(this, current)) {
           //When the termination count is at max the PCB
           //is ready to be terminated.
           printf("Process terminated: PID %d at %d\r\n", current->pid, that->totaltime);
           mtx_free_handle(this, that, current); //just in case
           current->termination = that->totaltime;
           current = term_inter_handle(this, that, current);
+          printf("Dead %s\r\n", q_toString(this->deadq));
         }
         //STEP 4 ----------------------------------------------
         //Check for IO completion.
@@ -228,13 +294,13 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
             printf("IO 1 Complete: PID %d at %d\r\n", q_peek(this->iowait1)->pid,
               that->totaltime);
             current = io_inter_handle(this, that, current, ioready1);
-            printf("IO 1 end.\r\n");
+            //printf("IO 1 end.\r\n");
         }
         if (io_2_inter(that, this->iowait2->node_count)) {
             printf("IO 2 Complete: PID %d at %d\r\n", q_peek(this->iowait2)->pid,
               that->totaltime);
             current = io_inter_handle(this, that, current, ioready2);
-            printf("IO 2 end.\r\n");
+            //printf("IO 2 end.\r\n");
         }
         //STEP 6 ----------------------------------------------
         if (current->type >= producer) {
@@ -271,7 +337,6 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
         //limit, delete the dead queue.
         if(this->deadq->node_count > 25) {
             printf("Dumping trash at %d\r\n", that->totaltime);
-            printf("Dead %s", q_toString(this->deadq));
             sch_dumptrash(this);
         }
         run = run - 1;

@@ -5,8 +5,8 @@
 #define MAXTIME 300
 
 typedef struct cpu_type {
-    unsigned int pseudostack;
-    unsigned int pc;
+    int pseudostack;
+    int pc;
     int timer;
     int totaltime;
     int iotime1;

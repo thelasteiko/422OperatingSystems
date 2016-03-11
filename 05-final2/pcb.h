@@ -30,22 +30,22 @@ typedef struct pcb_base_type {
 typedef pcb_base * pcb_base_ptr;
 
 typedef struct pcb_reg_type {
-  pcb_base super;
   int iodevice; //which device it's waiting on
-  int * io_1_traps;
-  int * io_2_traps;
+  int io_1_traps[ASIZE];
+  int io_2_traps[ASIZE];
+  pcb_base super;
 } pcb_reg;
 typedef pcb_reg * pcb_reg_ptr;
 
 typedef struct pcb_pc_type {
-  pcb_reg super;
-  int mtx; //which mtx it has a lock on, if any
-  int cv; //if it is waiting for a signal
   int mtxpc[ASIZE]; //when it attempts a lock
   int mtxlock[ASIZE]; //which mutex it will lock
+  enum pc_type name;
+  int mtx; //which mtx it has a lock on, if any
+  int cv; //if it is waiting for a signal
   //int index; //which lock is it on
   int mtxtime;  //the time until it releases lock
-  char * name;
+  pcb_reg super;
 } pcb_pc;
 typedef pcb_pc * pcb_pc_ptr;
 
@@ -84,10 +84,12 @@ int pcb_free_mtx(pcb_pc_ptr this);
 //pc >= mpc ? pc = 0, return 1
 //return 0
 //called by prc
-int pcb_reset_pc(pcb_base_ptr this, int mpc);
+int pcb_reset_pc(pcb_base_ptr this, int mpc, int pc);
 int pcb_set_priority(pcb_base_ptr this, int origpri);
 int pcb_set_marker(pcb_base_ptr this);
-
+pcb_base_ptr cast_base(void * this, enum process_type from);
+pcb_reg_ptr cast_reg (void * this, enum process_type from);
+pcb_pc_ptr cast_pc (void * this, enum process_type from);
 char * pcb_base_toString(pcb_base_ptr this);
 char * pcb_reg_toString(pcb_reg_ptr this);
 char * pcb_pc_toString(pcb_pc_ptr this);
