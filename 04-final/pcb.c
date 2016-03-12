@@ -80,7 +80,18 @@ int pcb_set_priority (pcb_ptr this) {
     //printf("PID: %d, OP: %d, Pri: %d, M: %d, OM: %d\r\n",
     //  this->pid, this->origpri, this->priority, this->marker,
     //  this->oldmarker);
-  if (this->origpri == 0) return 0;
+  if (this->origpri == 0) {
+    if (this->marker > this->oldmarker) {
+      if (this->pridown == 0 && this->priority <= MAXPRI) {
+        this->priority = this->priority + 1;
+      } else
+        this->pridown = this->pridown - 1;
+    } else {
+      this->priority = this->origpri;
+      this->pridown = MAXTIME;
+    }
+    return 0;
+  }
   if (this->marker < this->oldmarker) {
     if (this->pridown == 0) {
       if (this->priority > 0)
@@ -90,7 +101,6 @@ int pcb_set_priority (pcb_ptr this) {
       this->pridown = this->pridown - 1;
   } else {
     this->priority = this->origpri;
-    this->oldmarker = this->marker;
     this->pridown = MAXTIME;
   }
   //this->pridown = (this->origpri * MAXTIME) + MAXTIME;
@@ -259,10 +269,10 @@ char * pcb_toString(pcb_ptr this) {
     tc = this->termcount;
     
     sprintf(str, "PRI: %d, OP: %d, PID: %d, STATE: %d, TYPE: %d, PC: %d, "
-            "MPC: %d, CRE: %ld, T1: %ld, T2: %d, TC: %d, "
+            "MPC: %d, CRE: %ld, DEAD: %ld, KC: %d, TC: %d, M: %d, OM: %d, "
             "IO1: [%d,%d,%d,%d], IO2: [%d, %d, %d, %d], "
             "MTX: [%d,%d,%d,%d]",
-        pri, p, id, st, ty, pc, mpc, cre, t1, t2, tc,
+        pri, p, id, st, ty, pc, mpc, cre, t1, t2, tc, this->marker, this->oldmarker,
         this->IO_1_TRAPS[0], this->IO_1_TRAPS[1], this->IO_1_TRAPS[2], this->IO_1_TRAPS[3],
         this->IO_2_TRAPS[0], this->IO_2_TRAPS[1], this->IO_2_TRAPS[2], this->IO_2_TRAPS[3],
         this->mtx_lockon[0], this->mtx_lockon[1], this->mtx_lockon[2], this->mtx_lockon[3]

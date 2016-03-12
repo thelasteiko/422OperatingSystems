@@ -29,13 +29,17 @@ pque_ptr pq_constructor() {
 int pq_enqueue(pque_ptr this, pcb_ptr new_node) {
     /*Adds a PCB to the appropriate priority queue.*/
   //printf("Enqueing %s\r\n", pcb_toString(new_node));
-  if (!new_node || !this) {
-    printf("Error enqueueing in priq.");
+  if (!new_node) {
+    printf("Error: No node.\r\n");
+    return 1;
+  }
+  if (!this) {
+    printf("Error: No queue.\r\n");
     return 1;
   }
 	int index = pcb_get_priority(new_node);
   if (index > this->size-1 || index < 0) {
-      printf("Error enqueueing in priq.");
+      printf("Error: Wrong priority, %d.\r\n", index);
       return 1;
   }
 	que_ptr add_Here = this->priorityQue[index];
@@ -78,6 +82,15 @@ que_ptr pq_minpri(pque_ptr this) {
 
 que_ptr pq_getq(pque_ptr this, int index) {
   return this->priorityQue[index];
+}
+
+int pq_count (pque_ptr this) {
+  int i, sum = 0;
+    for (i = 0; i < this->size; i = i + 1) {
+      sum = sum + this->priorityQue[i]->node_count;
+    }
+  this->node_count = sum;
+  return sum;
 }
 
 char * pq_toString(pque_ptr this) {

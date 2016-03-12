@@ -32,6 +32,7 @@ pcb_ptr pq_dequeue(pque_ptr this);
 // returns the next node in the pque
 pcb_ptr pq_peek(pque_ptr this);
 que_ptr pq_minpri(pque_ptr this);
+int pq_count (pque_ptr this);
 // returns a string information regarding the
 char * pq_toString(pque_ptr this);
 // Deallocates memory dedicated to the pque.

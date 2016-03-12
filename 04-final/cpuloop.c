@@ -22,24 +22,6 @@ int proConVar[10]; //A global variable for each Producer/Consumer pair.
 int oldProConVar[10]; //Producer / 2 = (Consumer - 1) / 2 = array number.
 int mutualVar[20];
 
-int pair_dead(sch_ptr this, pcb_ptr current) {
-  int num = current->pairnumber;
-  if (num < 0) return 0;
-  if (current->type == producer || current->type == consumer) {
-    if (this->p_pairs[current->pairnumber] >= 2) {
-      this->p_pairs[current->pairnumber] = 0;
-      this->numpair = this->numpair - 1;
-          return 1;
-    }
-  } else if (current->type == mutual) {
-        if (this->m_pairs[current->pairnumber] >= 2) {
-          this->m_pairs[current->pairnumber] = 0;
-          this->nummutual = this->nummutual - 1;
-          return 1;
-        }
-  }
-  return 0;
-}
 int monitor (sch_ptr this) {
   /*Iterates through the ready queue and resets priority
    * levels to prevent starvation. */
@@ -53,30 +35,9 @@ int monitor (sch_ptr this) {
       //it should be at
       pcb_set_priority(temp2);
       n = n - 1;
-      if (pair_dead(this, temp2))
-        q_enqueue(this->deadq, temp2);
-      else
-        //requeue the PCB to the proper priority level
-        pq_enqueue(this->rdyq, temp2);
+      //requeue the PCB to the proper priority level
+      pq_enqueue(this->rdyq, temp2);
     }
-  }
-  n = this->iowait1->node_count;
-  while(n > 0) {
-    pcb_ptr temp3 = q_dequeue(this->iowait1);
-    if (pair_dead(this, temp3))
-      q_enqueue(this->deadq, temp3);
-    else
-      q_enqueue(this->iowait1, temp3);
-    n = n - 1;
-  }
-  n = this->iowait2->node_count;
-  while(n > 0) {
-    pcb_ptr temp3 = q_dequeue(this->iowait2);
-    if (pair_dead(this, temp3))
-      q_enqueue(this->deadq, temp3);
-    else
-      q_enqueue(this->iowait2, temp3);
-    n = n - 1;
   }
   return 0;
 }
@@ -243,7 +204,7 @@ pcb_ptr mtx_lock_handle(sch_ptr this, cpu_ptr that, pcb_ptr current) {
 int cpu_loop (sch_ptr this, cpu_ptr that) {
     /*Here's where things run.*/
     printf("Starting...\r\n");
-    int run = 100000; //This is how long it runs
+    int run = 300000; //This is how long it runs
     int pid = random1(0, 200);
     //This is how many PCBs will be made.
     int max = (MAXREG + MAXBUSY + MAXPAIR + MAXMUTUAL)-10;
@@ -274,12 +235,10 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
             printf("Timer interrupt: PID %d at %d\r\n", current->pid, that->totaltime);
             current = time_inter_handle(this, that, current);
         }
-        //if (current->pid < 0)
-          //current = time_inter_handle(this, that, current);
         //STEP 2 ----------------------------------------------
         //If the current PCB pc value is at the max
         //reset the PCB pc and increase the termination count.
-        if (pcb_reset_pc(current) || pair_dead(this, current)) {
+        if (pcb_reset_pc(current)) {
           //When the termination count is at max the PCB
           //is ready to be terminated.
           printf("Process terminated: PID %d at %d\r\n", current->pid, that->totaltime);

@@ -1,7 +1,9 @@
 gcc -Wall -c util.c -o util.o
 gcc -Wall -c list.c -o list.o
+
 gcc -Wall -c pcb.c -o pcb.o
 gcc -Wall -c prc.c -o prc.o
+
 gcc -Wall -c cpu.c -o cpu.o
 gcc -Wall -c que.c -o que.o
 gcc -Wall -c pque.c -o pque.o

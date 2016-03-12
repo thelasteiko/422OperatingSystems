@@ -23,10 +23,6 @@
 int cntx = 0;
 int cntx2 = 0;
 int pseudostack = 0;
-int iop = 0;
-int nummutualIncrease = 0;
-int callAmountMake_Mutual = 0;
-int increaseForNumMutual = 0;
 //char * proConStart = "ProducerConsumerPair:";
 //int numOfProCon; // the number of different Producer/Consumers that there are currently.
 
@@ -81,6 +77,7 @@ pcb_ptr make_regular (int pid, long rawTime, int pri,
   pcb_set_io1(this, list);
   create_list(list[NUMTRAPS-1], mpc, list);
   pcb_set_io2(this, list);
+  printf("Made regular: %s", pcb_toString(this));
   return this;
 }
 pcb_ptr make_busy (int pid, long rawTime, int pri,
@@ -148,7 +145,6 @@ pcb_ptr make_mutual (int pid, long rawTime, int pri,
   pcb_set_mtx(this, mtx);
   pcb_set_mtxlock(this, mtxlock);
   this->pairnumber = nummutual;
-  callAmountMake_Mutual = callAmountMake_Mutual + 1;
   return this;
 }
 //Condition variables are created when a thread is blocked.
@@ -187,7 +183,7 @@ int make_pcb(sch_ptr this, cpu_ptr that, int pid) {
       this->p_mtx[pairnumber] = m;
       this->p_pairs[pairnumber] = 1;
       this->numpair = this->numpair + 1;
-  } /*else if (prob <= 40 && this->nummutual < MAXMUTUAL) {
+  } else if (prob <= 40 && this->nummutual < MAXMUTUAL) {
       int pairnumber = sch_mutualnumber(this);
       pcb_ptr m1 = make_mutual(pid, that->totaltime,
         pri, mpc, t2, pairnumber);
@@ -205,7 +201,7 @@ int make_pcb(sch_ptr this, cpu_ptr that, int pid) {
       this->m_mtx[mtx2->mutex_name] = mtx2;
       this->m_pairs[pairnumber] = 1;
       this->nummutual = this->nummutual + 1;
-  }*/ else if (this->numreg < MAXREG) {
+  } else if (this->numreg < MAXREG) {
     q_enqueue(this->enq, make_regular(pid, that->totaltime, pri, mpc, t2));
     pid = pid + 1;
     this->numreg = this->numreg + 1;
@@ -385,31 +381,14 @@ pcb_ptr scheduler(sch_ptr this, cpu_ptr that, pcb_ptr current) {
         
         case dead:
         //put in deadq and return next rdyq pcb
-        switch(current->type) {
-          case regular:
+        if (current->type == regular)
           this->numreg = this->numreg - 1;
-          break;
-          case busy:
+        else if (current->type == busy)
           this->numbusy = this->numbusy - 1;
-          break;
-          break;
-          case producer:
-          if (this->p_pairs[current->pairnumber] >= 2) {
-            this->numpair = this->numpair - 1;
-            this->p_pairs[current->pairnumber] = 0;
-          }
-          break;
-          case consumer:
-          if (this->p_pairs[current->pairnumber] >= 2) {
-            this->numpair = this->numpair - 1;
-            this->p_pairs[current->pairnumber] = 0;
-          }
-          break;
-          case mutual:
-          if (this->m_pairs[current->pairnumber] >= 2) {
-            this->nummutual = this->nummutual - 1;
-            this->m_pairs[current->pairnumber] = 0;
-          }
+        else {
+          current->termcount = 0;
+          current->state = ready;
+          next = dispatcher(to, from, current);
           break;
         }
         next = dispatcher(this->deadq, from, current);
@@ -500,6 +479,10 @@ char * sch_toString(sch_ptr this) {
     strcat(str, "\r\nValues: ");
     sprintf(curr, "NR: %d, NB: %d, NP: %d, NM: %d",
       this->numreg, this->numbusy, this->numpair, this->nummutual);
+    strcat(str, curr);
+    sprintf(curr, "\r\nPriQ: %d, IO1: %d, IO2: %d, D: %d",
+      pq_count(this->rdyq), this->iowait1->node_count,
+      this->iowait2->node_count, this->deadq->node_count);
     strcat(str, curr);
     return str;
 }
