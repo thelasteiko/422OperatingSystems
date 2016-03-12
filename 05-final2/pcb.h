@@ -30,14 +30,15 @@ typedef struct pcb_base_type {
 typedef pcb_base * pcb_base_ptr;
 
 typedef struct pcb_reg_type {
+  pcb_base super;
   int iodevice; //which device it's waiting on
   int io_1_traps[ASIZE];
   int io_2_traps[ASIZE];
-  pcb_base super;
 } pcb_reg;
 typedef pcb_reg * pcb_reg_ptr;
 
 typedef struct pcb_pc_type {
+  pcb_reg super;
   int mtxpc[ASIZE]; //when it attempts a lock
   int mtxlock[ASIZE]; //which mutex it will lock
   enum pc_type name;
@@ -45,7 +46,6 @@ typedef struct pcb_pc_type {
   int cv; //if it is waiting for a signal
   //int index; //which lock is it on
   int mtxtime;  //the time until it releases lock
-  pcb_reg super;
 } pcb_pc;
 typedef pcb_pc * pcb_pc_ptr;
 

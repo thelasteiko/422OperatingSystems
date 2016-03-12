@@ -14,10 +14,10 @@
 #define MAXTIME 300
 #define ASIZE 4
 #define MAXPRI 3
-#define MAXREG 50
-#define MAXBUSY 2
-#define MAXPAIR 10
-#define MAXMUTUAL 10
+#define MAXREG 10
+#define MAXBUSY 0
+#define MAXPAIR 1
+#define MAXMUTUAL 1
 #define MAXPID 90
 
 int pairs[MAXPAIR+MAXMUTUAL];

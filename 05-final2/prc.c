@@ -36,14 +36,14 @@ int prc_initialize(prc_ptr this, int pid, int tid, int pri,
     this->terminate = my_rand(2, 15);
     pcb_pc_ptr temp = NULL;
     switch (type) {
-      case regular:
-      ls_insertAt(this->threads, 0,
-        pcb_make_reg(pid, tid, pri, 0, this->max_pc));
-      tid = tid + 1;
-      break;
       case busy:
       ls_insertAt(this->threads, 0,
         pcb_make_busy(pid, tid, pri));
+      tid = tid + 1;
+      break;
+      case regular:
+      ls_insertAt(this->threads, 0,
+        pcb_make_reg(pid, tid, pri, 0, this->max_pc));
       tid = tid + 1;
       break;
       case pc_pair:

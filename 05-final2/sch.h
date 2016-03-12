@@ -10,12 +10,9 @@
 #ifndef SCH
 #define SCH
 
-#include "pcb.h"
-#include "prc.h"
-#include "que.h"
 #include "cpu.h"
+#include "prc.h"
 #include "pque.h"
-#include "list.h"
 
 //use the current's thread pid reference to locate
 //the parent process

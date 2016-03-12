@@ -76,7 +76,7 @@ int sch_enqueue(sch_ptr this, cpu_ptr that) {
   if (that->pid < MAXPID) i = my_rand(1, 5);
   else i = 0;
   prc_ptr newprc = NULL;
-  printf("%d\r\n", i);
+  //printf("%d\r\n", i);
   while (i) {
     newprc = make_process(this, that);
     printf("Made Process\r\n%s\r\n", prc_toString(newprc));
@@ -90,6 +90,7 @@ int sch_enqueue(sch_ptr this, cpu_ptr that) {
   }
 	while(this->enq->node_count > 0) {
     pcb_base_ptr node = (pcb_base_ptr) q_dequeue(this->enq);
+    printf("Enqueing %s\r\n", pcb_base_toString(node));
     pq_enqueue(this->rdyq, node, node->pri);
   }
   return 0;

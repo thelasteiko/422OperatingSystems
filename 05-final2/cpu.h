@@ -9,8 +9,6 @@ We have:
 #ifndef CPU
 #define CPU
 
-#include "util.h"
-
 typedef struct cpu_type {
   int pc;
   int pid; //next pid that can be made

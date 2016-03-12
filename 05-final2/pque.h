@@ -12,7 +12,6 @@
 #define MY_PQUE
 
 #include "que.h"
-#include "pcb.h"
 
 typedef struct pque_type {
 	que_ptr priorityQue[MAXPRI+1];

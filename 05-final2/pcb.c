@@ -47,7 +47,7 @@ pcb_reg_ptr pcb_make_reg(int pid, int tid, int origpri,
 }
 pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
   enum process_type type, int pair) {
-    printf("Making PC or Mutual %d\r\n", pair);
+    //printf("Making PC or Mutual %d\r\n", pair);
   pcb_pc_ptr this = (pcb_pc_ptr) malloc(sizeof(pcb_pc));
   //start with hard coded values
   this->mtx = -1;
@@ -57,7 +57,7 @@ pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
   int m1[ASIZE] = {5, 17, 32, 54};
   int i, p1 = pair*2, p2 = pair*2+1;
   for (i = 0; i < ASIZE; i = i + 1) {
-    printf("(%d,%d,%d,%d)", i, pair, p1, p2);
+    //printf("(%d,%d,%d,%d)", i, pair, p1, p2);
     this->mtxpc[i] = m1[i];
     if (type == pc_pair)
       this->mtxlock[i] = pair;
@@ -65,7 +65,7 @@ pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
       this->mtxlock[i] = p1;
     else if (type == mutual && i%2==1)
       this->mtxlock[i] = p2;
-    printf(" : %d\r\n", this->mtxlock[i]);
+    //printf(" : %d\r\n", this->mtxlock[i]);
   }
   this->super = *pcb_make_reg(pid, tid, origpri, 54, mpc);
   return this;
@@ -75,10 +75,14 @@ pcb_pc_ptr pcb_make_pc(int pid, int tid, int origpri, int mpc,
 int pcb_trap_io(pcb_reg_ptr this, int pc) {
   int i;
   for (i = 0; i < ASIZE; i = i + 1) {
-    if (this->io_1_traps[i] == pc)
+    if (this->io_1_traps[i] == pc) {
       this->iodevice = 1;
-    if (this->io_2_traps[i] == pc)
+      return this->iodevice;
+    }
+    if (this->io_2_traps[i] == pc) {
       this->iodevice = 2;
+      return this->iodevice;
+    }
   }
   this->iodevice = 0;
   return this->iodevice;
@@ -99,12 +103,14 @@ int pcb_lock_mtx(pcb_pc_ptr this, int pc) {
 //0: still has time, 1: reset time
 //if 1, reset mtx
 int pcb_free_mtx(pcb_pc_ptr this) {
+  int temp = 0;
+  if (this->mtx < 0) return 0;
   if (this->mtxtime == 0) {
+    temp = this->mtx;
     this->mtx = -1;
-    return 1;
   }
   this->mtxtime = this->mtxtime - 1;
-  return 0;
+  return temp;
 }
 
 //pc >= mpc ? pc = 0, return 1
@@ -222,8 +228,8 @@ char * pcb_pc_toString(pcb_pc_ptr this) {
     this->mtxpc[0], this->mtxpc[1], this->mtxpc[2], this->mtxpc[3],
     this->mtxlock[0], this->mtxlock[1], this->mtxlock[2], this->mtxlock[3]
   );
-  printf("MLC: [%d,%d,%d,%d]",this->mtxlock[0], this->mtxlock[1],
-    this->mtxlock[2], this->mtxlock[3]);
+  //printf("MLC: [%d,%d,%d,%d]",this->mtxlock[0], this->mtxlock[1],
+  //  this->mtxlock[2], this->mtxlock[3]);
   strcat(str, curr);
   return str;
 }

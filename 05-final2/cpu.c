@@ -42,6 +42,8 @@ int handle_sch(sch_ptr this, cpu_ptr that) {
  
 int handle_trap_io(sch_ptr this, cpu_ptr that) {
   pcb_reg_ptr current = cast_reg(this->cpcb, this->cprc->type);
+  printf("IO Trap %d by %d at %ld.", current->iodevice,
+    current->super.tid, that->totaltime);
   current->super.state = iowait;
   handle_sch(this, that);
   return 0;
@@ -55,7 +57,7 @@ int handle_lock_mtx(sch_ptr this, cpu_ptr that) {
     node = cast_pc(this->cpcb, t);
     //should already has mtx registered
     if (node->mtx < 0) {
-      printf("Error: Mutex P does not exist.\r\n");
+      printf("Error: Mutex P does not exist: %d.\r\n", node->mtx);
       return 0;
     }
     m = p_mutexes[node->mtx];
@@ -63,7 +65,7 @@ int handle_lock_mtx(sch_ptr this, cpu_ptr that) {
   if (t == mutual) {
     node = cast_pc(this->cpcb, t);
     if (node->mtx < 0) {
-      printf("Error: Mutex M does not exist.\r\n");
+      printf("Error: Mutex M does not exist: %d.\r\n", node->mtx);
       return 0;
     }
     m = m_mutexes[node->mtx];
@@ -80,13 +82,15 @@ int handle_lock_mtx(sch_ptr this, cpu_ptr that) {
   return 0;
 }
 
-int handle_free_mtx(sch_ptr this, cpu_ptr that, int freethis) {
+int handle_free_mtx(sch_ptr this, cpu_ptr that) {
   enum process_type t = this->cprc->type; //check type
   mutex_ptr m = NULL;
+  int freethis = -1;
   //mtx has been reset, hopefully
   pcb_pc_ptr node = NULL;
   if (t == pc_pair) {
     node = cast_pc(this->cpcb, t);
+    freethis = node->mtx;
     //should already have mtx registered
     if (freethis < 0) {
       printf("Error: Mutex P does not exist.\r\n");
@@ -96,6 +100,7 @@ int handle_free_mtx(sch_ptr this, cpu_ptr that, int freethis) {
   }
   if (t == mutual) {
     node = cast_pc(this->cpcb, t);
+    freethis = node->mtx;
     if (freethis < 0) {
       printf("Error: Mutex M does not exist.\r\n");
       return 0;
@@ -121,7 +126,7 @@ int handle_run_mtx(sch_ptr this, cpu_ptr that) {
     node = cast_pc(this->cpcb, t);
     //should already has mtx registered
     if (node->mtx < 0) {
-      printf("Error: Mutex P is not locked.\r\n");
+      printf("Error: Mutex P is not locked: %d.\r\n", node->mtx);
       return 0;
     }
     m = p_mutexes[node->mtx];
@@ -167,7 +172,7 @@ int handle_run_mtx(sch_ptr this, cpu_ptr that) {
   if (t == mutual) {
     node = cast_pc(this->cpcb, t);
     if (node->mtx < 0) {
-      printf("Error: Mutex M does not exist.\r\n");
+      printf("Error: Mutex M is not locked: %d.\r\n", node->mtx);
       return 0;
     }
     m = m_mutexes[node->mtx];
@@ -267,7 +272,7 @@ int inter_free_mtx(sch_ptr this) {
     pcb_pc_ptr current = cast_pc(this->cpcb, cprc->type);
     return (pcb_free_mtx(current));
   }
-  return -1;
+  return 0;
 }
 
 int inter_io_trap (sch_ptr this, cpu_ptr that) {
@@ -275,7 +280,7 @@ int inter_io_trap (sch_ptr this, cpu_ptr that) {
   int ret = 0;
   if (cprc->type >= regular) {
     pcb_reg_ptr current = cast_reg(this->cpcb, cprc->type);
-    printf("I casted it.");
+    //printf("I casted it.");
     int ret = pcb_trap_io(current, that->pc);
     if(ret > 0)
       printf("IO %d Trap on PID %d at %ld\r\n",
@@ -300,27 +305,27 @@ int inter_term(sch_ptr this, cpu_ptr that) {
 }
 
 int cpu_loop (sch_ptr this, cpu_ptr that) {
-  printf("Starting loop...\r\n");
+  //printf("Starting loop...\r\n");
   //STEP 1 : Create new processes.
   //1.a: How many processes are there? : < max, create new
   //      Have sch check in enqueue
   sch_enqueue(this, that);
-  printf("PCBs enqueued.\r\n");
+  //printf("PCBs enqueued.\r\n");
   //STEP 2 : Check for starvation.
   /*if (that->totaltime % MAXTIME == 0) {
     sch_monitor(this);
   }*/
-  printf("Checking timer interrupt.\r\n");
+  //printf("Checking timer interrupt.\r\n");
   //STEP 3 : Check for timer interrupt.
   if (inter_time(that)) {
     handle_timer(this, that);
   }
-  printf("Checking termination interrupt.\r\n");
+  //printf("Checking termination interrupt.\r\n");
   //STEP 4 : Check for resetting pc or termination.
   if (inter_term(this,that)) {
     handle_term(this, that);
   }
-  printf("Checking IO interrupt.\r\n");
+  //printf("Checking IO interrupt.\r\n");
   //STEP 5 : Check for IO interrupt.
   //5.a : io 1
   if (inter_io1(that, this->io1->node_count)) {
@@ -330,33 +335,34 @@ int cpu_loop (sch_ptr this, cpu_ptr that) {
   if (inter_io2(that, this->io2->node_count)) {
     handle_inter_io2(this, that);
   }
-  /*printf("Checking to free mutex.\r\n");
+  //printf("Checking to free mutex.\r\n");
   //STEP 6 : Check for freeing mutex.
   //6.a : Check if timeout is reached.
-  int freethis = inter_free_mtx(this);
-  if (freethis >= 0) {
+  /*if (inter_free_mtx(this)) {
     //6.c : if so, release the mutex and move next waiting thread to ready q
-    handle_free_mtx(this, that, freethis);
+    handle_free_mtx(this, that);
   } else {
     //6.b : if not, run the pcb to attempt to change the shared variable
     handle_run_mtx(this, that);
   }*/
   //STEP 6.5 : must increase pc before going to trap checks
   that->pc = that->pc+1;
-  printf("Checking for IO trap.\r\n");
+  //printf("Checking for IO trap.\r\n");
   //STEP 7 : Check for IO trap. IO will return device or 0.
   int device = inter_io_trap(this, that);
+  printf("Checking IO on %s at %d.\r\n", prc_toString(this->cprc),
+    that->pc);
   if (device) {
     handle_trap_io(this, that);
   }
-  /*printf("Checking for mutex lock.\r\n");
+  //printf("Checking for mutex lock.\r\n");
   //STEP 8 : Check for mutex lock.
   //where do I keep track of mutexes?
-  int lockthis = inter_lock_mtx(this, that);
+  /*int lockthis = inter_lock_mtx(this, that);
   if (lockthis >= 0) {
     handle_lock_mtx(this, that);
   }*/
-  printf("End of loop.\r\n");
+  //printf("End of loop.\r\n");
   return 0;
 }
 
@@ -377,7 +383,8 @@ int main (void) {
     printf("Error: Could not initialize scheduler.");
     return 1;
   }
-  int run = 10;
+  printf("Starting PCB:\r\n%s\r\n", prc_toString(this->cprc));
+  int run = 100;
   while (run) {
     cpu_loop(this, that);
     that->totaltime = that->totaltime + 1;
