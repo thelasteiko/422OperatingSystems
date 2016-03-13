@@ -47,6 +47,6 @@ int sch_check_pc(sch_ptr this, cpu_ptr that);
 int sch_monitor(sch_ptr this);
 //int sch_dumptrash(sch_ptr this);
 int sch_destructor(sch_ptr this);
-//char * sch_toString(sch_ptr this);
+char * sch_toString(sch_ptr this);
 
 #endif

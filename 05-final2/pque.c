@@ -83,6 +83,15 @@ que_ptr pq_getq(pque_ptr this, int index) {
   return this->priorityQue[index];
 }
 
+int pq_getcount(pque_ptr this) {
+  int i, sum = 0;
+  for (i = 0; i < this->size; i = i + 1) {
+    sum = sum + this->priorityQue[i]->node_count;
+  }
+  this->node_count = sum;
+  return sum;
+}
+
 char * pq_toString(pque_ptr this) {
 /*Prints the priority queue by calling individual queueu toStrings.*/
 	char * str = (char *) malloc(sizeof(char) * 1000);

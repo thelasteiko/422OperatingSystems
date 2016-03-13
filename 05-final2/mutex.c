@@ -14,11 +14,13 @@
 #include <stdlib.h>
 
 mutex_ptr mutex_constructor(int name) {
+  printf("Creating Mutex.\r\n");
 	mutex_ptr mut = (mutex_ptr) malloc (sizeof(mutex));
 	mut->waiting_pcbs = que_constructor();
   mut->using_pcb = NULL;
 	mut->mutex_state = 0;
 	mut->mutex_name = name;
+  printf("Mutex %d created:\r\n%s\r\n", mut->mutex_name, mutex_toString(mut));
 	return mut;
 }
 
@@ -62,5 +64,15 @@ pcb_pc_ptr mutex_unlock (mutex_ptr this, pcb_pc_ptr thispcb) {
 		//then using_pcb ='s the next item in the waiting que.
 	} else return NULL;
 	return this->using_pcb;
+}
+
+char * mutex_toString(mutex_ptr this) {
+  char * str = (char *) malloc(sizeof(char)*1000);
+  sprintf(str, "Mutex %d, ST: %d\r\n",
+    this->mutex_name, this->mutex_state);
+  /*strcat(str, pcb_pc_toString(this->using_pcb));
+  strcat(str, "\r\n");
+  strcat(str, q_toString(this->waiting_pcbs));*/
+  return str;
 }
 

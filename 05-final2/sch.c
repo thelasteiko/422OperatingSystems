@@ -43,7 +43,7 @@ prc_ptr make_process(sch_ptr this, cpu_ptr that) {
   else if (prob <= 85) pri = 1;
   else if (prob <= 95) pri = 2;
   prob = my_rand(1, 100);
-  enum process_type type = busy;
+  enum process_type type = regular;
   if (pri == 0 && this->numbers[busy] < MAXBUSY) {
     this->numbers[busy] = this->numbers[busy] + 1;
   } else if (prob <= 20 && this->numbers[pc_pair] < MAXPAIR) {
@@ -52,6 +52,9 @@ prc_ptr make_process(sch_ptr this, cpu_ptr that) {
   } else if (prob <= 40 && this->numbers[mutual] < MAXMUTUAL) {
     type = mutual;
     this->numbers[mutual] = this->numbers[mutual] + 1;
+  } else if (this->numbers[regular] < MAXREG) {
+    type = regular;
+    this->numbers[regular] = this->numbers[regular] + 1;
   }
   prc_ptr newprc = prc_constructor();
   that->tid = prc_initialize(newprc, that->pid, that->tid,
@@ -328,4 +331,24 @@ int sch_destructor(sch_ptr this) {
   if (this->deadprc) ls_destructor(this->deadprc);
   free(this);
   return 0;
+}
+
+char * sch_toString(sch_ptr this) {
+  char * str = (char *) malloc(sizeof(char) * 10000);
+      char * curr = (char *) malloc(sizeof(char) * 64);
+    strcat(str, "Scheduler:\r\n");
+    strcat(str, pq_toString(this->rdyq));
+    strcat(str, "\r\nIO1:\r\n");
+    strcat(str, q_toString(this->io1));
+    strcat(str, "\r\nIO2:\r\n");
+    strcat(str, q_toString(this->io2));
+    strcat(str, "\r\nValues: ");
+    sprintf(curr, "NB: %d, NR: %d, NP: %d, NM: %d",
+      this->numbers[0], this->numbers[1], this->numbers[2], this->numbers[3]);
+    strcat(str, curr);
+    sprintf(curr, "\r\nPriQ: %d, IO1: %d, IO2: %d, D: %d",
+      pq_getcount(this->rdyq), this->io1->node_count,
+      this->io2->node_count, this->deadprc->node_count);
+    strcat(str, curr);
+    return str;
 }

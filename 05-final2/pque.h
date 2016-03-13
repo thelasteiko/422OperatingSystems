@@ -30,6 +30,7 @@ void * pq_dequeue(pque_ptr this);
 void * pq_peek(pque_ptr this);
 que_ptr pq_minpri(pque_ptr this);
 que_ptr pq_getpri(pque_ptr this, int pri);
+int pq_getcount(pque_ptr this);
 // returns a string information regarding the
 char * pq_toString(pque_ptr this);
 // Deallocates memory dedicated to the pque.

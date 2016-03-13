@@ -87,14 +87,17 @@ int pcb_trap_io(pcb_reg_ptr this, int pc) {
   this->iodevice = 0;
   return this->iodevice;
 }
-//-1: no lock, >=0: locks at pc, return mtx, increase index
+//-1: no lock, >=0: locks at pc, return mtx
 //set mtx here
 int pcb_lock_mtx(pcb_pc_ptr this, int pc) {
   int i;
+  printf("Checking mutex lock on %d at %d: [%d,%d,%d,%d]",
+    this->super.super.tid, pc, this->mtxpc[0],this->mtxpc[1],
+    this->mtxpc[2],this->mtxpc[3]);
   for (i = 0; i < ASIZE; i = i + 1) {
     if (this->mtxpc[i] == pc) {
       this->mtx = this->mtxlock[i];
-      this->mtxtime = pc + 5;
+      this->mtxtime = 5;
       return this->mtx;
     }
   }
