@@ -37,7 +37,7 @@ void * prc_thread(prc_ptr this, int tid);
 //check each -> 1 ? add to termcount
 //call inside ISR handle
 int prc_check_term(prc_ptr this, int tid, int pc);
-
+int prc_destructor(prc_ptr this);
 char * prc_toString(prc_ptr this);
 
 #endif

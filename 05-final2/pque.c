@@ -48,15 +48,19 @@ int pq_enqueue(pque_ptr this, void * new_node, int index) {
 }
 
 void * pq_dequeue(pque_ptr this) {
-    /*Dequeues and returns a PCB pointer.*/
+  /*Dequeues and returns a PCB pointer.*/
+  //printf("Dequeing...\r\n");
+  void * removed = NULL;
 	int index = 0;
-	while (this->priorityQue[index]->node_count == 0
-        && index < this->size) {
+	while (this->priorityQue[index]->node_count <= 0
+        && index < this->size-1) {
 		index = index + 1;
 	}
-    if (index >= this->size) return NULL;
-	void * removed = q_dequeue((que_ptr) this->priorityQue[index]);
-    this->node_count = this->node_count - 1;
+  if (index >= this->size) {
+    return 0;
+  }
+	removed = q_dequeue(this->priorityQue[index]);
+  this->node_count = this->node_count - 1;
 	return removed;
 }
 

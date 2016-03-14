@@ -14,13 +14,13 @@
 #include <stdlib.h>
 
 mutex_ptr mutex_constructor(int name) {
-  printf("Creating Mutex.\r\n");
+  //printf("Creating Mutex.\r\n");
 	mutex_ptr mut = (mutex_ptr) malloc (sizeof(mutex));
 	mut->waiting_pcbs = que_constructor();
   mut->using_pcb = NULL;
 	mut->mutex_state = 0;
 	mut->mutex_name = name;
-  printf("Mutex %d created:\r\n%s\r\n", mut->mutex_name, mutex_toString(mut));
+  //printf("Mutex %d created:\r\n%s\r\n", mut->mutex_name, mutex_toString(mut));
 	return mut;
 }
 
@@ -30,13 +30,14 @@ int mutex_lock (mutex_ptr this, pcb_pc_ptr thispcb) {
   //just continue
   if (this->using_pcb == thispcb) {
     this->mutex_state = 1;
-    return 0;
+    return 1;
   }
 	if(this->mutex_state == 0) {
 		result = 1;
 		this->using_pcb = thispcb;
 		this->mutex_state = 1;
 	} else {
+    result = 0;
 		thispcb->super.super.state = blocked;
 		q_enqueue(this->waiting_pcbs, thispcb);
 	}

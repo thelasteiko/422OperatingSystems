@@ -20,12 +20,14 @@ cond_ptr cond_constructor() {
 	return con;
 }
 
-int cond_wait(cond_ptr this, mutex_ptr this2) {
+pcb_pc_ptr cond_wait(cond_ptr this, mutex_ptr this2) {
 	this->associated_mutex = this2;
+  pcb_pc_ptr thread = this2->using_pcb;
   q_enqueue(this->waiting_thread, this2->using_pcb);
   mutex_unlock(this2, this2->using_pcb);
   this->condition = 1;
-	return 1;
+  thread->super.super.state = blocked;
+	return thread;
 }
 
 pcb_pc_ptr cond_signal(cond_ptr this) {

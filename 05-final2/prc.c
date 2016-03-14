@@ -112,6 +112,12 @@ int prc_check_term(prc_ptr this, int tid, int pc) {
   else return 0;
 }
 
+int prc_destructor(prc_ptr this) {
+  ls_destructor(this->threads);
+  free(this);
+  return 0;
+}
+
 char * prc_toString(prc_ptr this) {
   char * str = NULL;
   char * curr = NULL;

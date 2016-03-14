@@ -51,8 +51,10 @@ int q_enqueue(que_ptr this, void * new_node) {
 }
 /*get the first item from the que*/
 void * q_dequeue(que_ptr this) {
-	void * p = this->first_node->value;
-	if (p != NULL) {
+  void * p = NULL;
+  if (this->first_node)
+	 p = this->first_node->value;
+	if (p) {
     node_ptr temp = this->first_node;
 		this->first_node = this->first_node->next_node;
 		this->node_count = this->node_count - 1;

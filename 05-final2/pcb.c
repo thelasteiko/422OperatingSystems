@@ -91,9 +91,9 @@ int pcb_trap_io(pcb_reg_ptr this, int pc) {
 //set mtx here
 int pcb_lock_mtx(pcb_pc_ptr this, int pc) {
   int i;
-  printf("Checking mutex lock on %d at %d: [%d,%d,%d,%d]",
+  /*printf("Checking mutex lock on %d at %d: [%d,%d,%d,%d]",
     this->super.super.tid, pc, this->mtxpc[0],this->mtxpc[1],
-    this->mtxpc[2],this->mtxpc[3]);
+    this->mtxpc[2],this->mtxpc[3]);*/
   for (i = 0; i < ASIZE; i = i + 1) {
     if (this->mtxpc[i] == pc) {
       this->mtx = this->mtxlock[i];
@@ -106,8 +106,8 @@ int pcb_lock_mtx(pcb_pc_ptr this, int pc) {
 //0: still has time, 1: reset time
 //if 1, reset mtx
 int pcb_free_mtx(pcb_pc_ptr this) {
-  int temp = 0;
-  if (this->mtx < 0) return 0;
+  int temp = -1;
+  if (this->mtx < 0) return -1;
   if (this->mtxtime == 0) {
     temp = this->mtx;
     this->mtx = -1;

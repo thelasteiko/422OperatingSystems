@@ -14,11 +14,11 @@
 #define MAXTIME 300
 #define ASIZE 4
 #define MAXPRI 3
-#define MAXREG 10
-#define MAXBUSY 2
-#define MAXPAIR 1
-#define MAXMUTUAL 1
-#define MAXPID 12
+#define MAXREG 50
+#define MAXBUSY 25
+#define MAXPAIR 10
+#define MAXMUTUAL 10
+#define MAXPID 70
 
 int pairs[MAXPAIR+MAXMUTUAL];
 /*Possible states a process can be in. Default is dead.*/

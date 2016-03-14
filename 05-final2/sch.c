@@ -43,7 +43,7 @@ prc_ptr make_process(sch_ptr this, cpu_ptr that) {
   else if (prob <= 85) pri = 1;
   else if (prob <= 95) pri = 2;
   prob = my_rand(1, 100);
-  enum process_type type = regular;
+  enum process_type type = busy;
   if (pri == 0 && this->numbers[busy] < MAXBUSY) {
     this->numbers[busy] = this->numbers[busy] + 1;
   } else if (prob <= 20 && this->numbers[pc_pair] < MAXPAIR) {
@@ -122,10 +122,16 @@ int sch_ready(sch_ptr this, void * that) {
   return 0;
 }
 
-pcb_base_ptr idle_process () {
+void * idle_process (sch_ptr this) {
     /*An idle process to keep the CPU busy.*/
-    pcb_base_ptr idle = pcb_make_busy(-1,-1,MAXPRI);
-    return idle;
+    printf("Making idle process.\r\n");
+    //pcb_base_ptr idle = pcb_make_busy(-1,-1,MAXPRI);
+    prc_ptr idle = prc_constructor();
+    prc_initialize(idle, -1, -1, MAXPRI, -1, busy);
+    this->cprc = idle;
+    this->cpcb = ls_get(this->cprc->threads, 0);
+    //printf("Idle: %p\r\n", idle);
+    return this->cpcb;
 }
 
 int dispatch_ready(sch_ptr this) {
@@ -134,14 +140,19 @@ int dispatch_ready(sch_ptr this) {
   current->pc = pseudostack;
   if (tag == 3)
     printf("\r\nSwitching from %s\r\n", pcb_base_toString(current));
-  if (current->pid == -1)
-    free(current);
-  else pq_enqueue(this->rdyq, current, current->pri);
+  if (current->pid < 0) {
+    //printf("Destroying things...\r\n");
+    current = NULL;
+    prc_ptr myprc = this->cprc;
+    this->cprc = NULL;
+    prc_destructor(myprc);
+    //printf("Destroyed PRC.\r\n");
+  } else pq_enqueue(this->rdyq, current, current->pri);
   void * next = NULL;
-  if (this->rdyq->node_count > 0)
-    next = pq_dequeue(this->rdyq);
-  else
-    next = (void *) idle_process();
+  next = pq_dequeue(this->rdyq);
+  if (!next) {
+    next = idle_process(this);
+  }
   pcb_base_ptr temp = (pcb_base_ptr) next;
   pseudostack = temp->pc;
   if(tag == 3) {
@@ -154,24 +165,33 @@ int dispatch_ready(sch_ptr this) {
   return 0;
 }
 
-void * dispatch_io_wait(sch_ptr this) {
+int dispatch_io_wait(sch_ptr this) {
   pcb_reg_ptr current = (pcb_reg_ptr) this->cpcb;
   current->super.pc = pseudostack;
+  //printf("IO Trap for %s\r\n.", pcb_reg_toString(current));
   if (tag == 3)
     printf("\r\nSwitching from %s\r\n", pcb_reg_toString(current));
-  if (current->super.pid == -1)
-    free(current);
+  if (current->super.pid < 0) {
+    current = NULL;
+    prc_destructor(this->cprc);
+    this->cprc = NULL;
+  }
   else {
+    //printf("Scheduler at IO:\r\n%s\r\n", sch_toString(this));
     if (current->iodevice == 1)
       q_enqueue(this->io1, current);
     else
       q_enqueue(this->io2, current);
+    //printf("Scheduler after enq at IO:\r\n%s\r\n", sch_toString(this));
   }
   void * next = NULL;
+  //printf("Attempting dequeue.\r\n");
   next = pq_dequeue(this->rdyq);
-  if (!next)
-    next = (void *) idle_process();
+  if (!next) {
+    next = idle_process(this);
+  }
   pcb_base_ptr temp = (pcb_base_ptr) next;
+  //printf("Recovering from IO Trap with %s\r\n.", pcb_base_toString(temp));
   pseudostack = temp->pc;
   if(tag == 3) {
     printf("Switched to %s\r\n\r\n", pcb_base_toString(temp));
@@ -183,15 +203,13 @@ void * dispatch_io_wait(sch_ptr this) {
   return 0;
 }
 
-void * dispatch_io_ready(sch_ptr this, int device) {
+int dispatch_io_ready(sch_ptr this, int device) {
   pcb_reg_ptr current = (pcb_reg_ptr) this->cpcb;
   current->super.pc = pseudostack;
-  if (tag == 3)
-    printf("\r\nSwitching from %s\r\n", pcb_reg_toString(current));
   void * next = NULL;
   if (device == 1)
     next = q_dequeue(this->io1);
-  else
+  else if (device == 2)
     next = q_dequeue(this->io2);
   if (next) {
     pcb_base_ptr temp = (pcb_base_ptr) next;
@@ -208,15 +226,17 @@ void * dispatch_io_ready(sch_ptr this, int device) {
   return 0;
 }
 
-void * dispatch_blocked(sch_ptr this) {
+int dispatch_blocked(sch_ptr this) {
   pcb_pc_ptr current = (pcb_pc_ptr) this->cpcb;
   current->super.super.pc = pseudostack;
   if (tag == 3)
     printf("\r\nSwitching from %s\r\n", pcb_pc_toString(current));
+  //printf("Ready Q\r\n%s\r\n", pq_toString(this->rdyq));
   void * next = NULL;
   next = pq_dequeue(this->rdyq);
-  if (!next)
-    next = (void *) idle_process();
+  if (!next) {
+    next = idle_process(this);
+  }
   pcb_base_ptr temp = (pcb_base_ptr) next;
   pseudostack = temp->pc;
   if(tag == 3) {
@@ -229,22 +249,25 @@ void * dispatch_blocked(sch_ptr this) {
   return 0;
 }
 
-void * dispatch_dead(sch_ptr this) {
+int dispatch_dead(sch_ptr this) {
   pcb_base_ptr current = (pcb_base_ptr) this->cpcb;
   current->pc = pseudostack;
   if (tag == 3)
     printf("\r\nSwitching from %s\r\n", pcb_base_toString(current));
-  if(this->cprc) {
+  if (this->cprc->pid >= 0) {
     this->numbers[this->cprc->type] =
       this->numbers[this->cprc->type] - 1;
     ls_insertAt(this->deadprc, 0, this->cprc);
+  } else if (current->pid < 0) {
+    current = NULL;
+    prc_destructor(this->cprc);
+    this->cprc = NULL;
   }
-  if (current->pid == -1)
-    free(current);
   void * next = NULL;
   next = pq_dequeue(this->rdyq);
-  if (!next)
-    next = (void *) idle_process();
+  if (!next) {
+    next = idle_process(this);
+  }
   pcb_base_ptr temp = (pcb_base_ptr) next;
   pseudostack = temp->pc;
   if(tag == 3) {
@@ -261,6 +284,7 @@ int scheduler(sch_ptr this, cpu_ptr that) {
   pseudostack = that->pc;
   pcb_base_ptr current = (pcb_base_ptr) this->cpcb;
   enum state_type inter = current->state;
+  //printf("Switch Start %p:%p\r\n", this->cprc, this->cpcb);
   switch(inter) {
     case ready: //enqueue
     dispatch_ready(this);
@@ -291,9 +315,11 @@ int scheduler(sch_ptr this, cpu_ptr that) {
   current = (pcb_base_ptr) this->cpcb;
   current->state = running;
   pcb_set_marker(current);
-  if (current->pid != -1)
+  if (current->pid >= 0)
     this->cprc = get_prc(this, current->pid);
-  else this->cprc = NULL;
+  //Create a busy process to go with the busy thread.
+  //else this->cprc = NULL;
+  //printf("Switch End %p:%p\r\n", this->cprc, this->cpcb);
   that->pc = pseudostack;
   return 0;
 }
